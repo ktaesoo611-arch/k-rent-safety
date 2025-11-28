@@ -744,17 +744,13 @@ export async function POST(request: NextRequest) {
       const address = analysis.properties?.address || '';
 
       // Perform real OCR and analysis
+      // Note: performRealAnalysis() handles all database updates internally,
+      // including saving parsed_data to uploaded_documents and risk analysis to analysis_results
       const result = await performRealAnalysis(buffer, document.analysis_id, proposedJeonse, address);
 
-      parsedData = {
-        documentType: 'deunggibu',
-        fileName: document.original_filename,
-        uploadedAt: document.created_at,
-        fileSize: buffer.length,
-        status: result.success ? 'parsed' : 'failed',
-        usedMock: 'mock' in result ? result.mock : false,
-        note: ('mock' in result && result.mock) ? 'Used mock analysis (OCR unavailable or failed)' : 'Real OCR and parsing completed',
-      };
+      // Don't overwrite the parsed_data - it was already saved inside performRealAnalysis
+      // Just set a flag so we skip the update below
+      parsedData = null; // Will skip the database update below
 
     } else if (document.document_type === 'building_ledger') {
       // Parse 건축물대장
@@ -788,33 +784,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Update document record with parsed data
-    const { data: updatedDocument, error: updateError } = await supabase
-      .from('uploaded_documents')
-      .update({
-        parsed_data: parsedData,
-      })
-      .eq('id', body.documentId)
-      .select()
-      .single();
+    // Skip update if parsedData is null (means it was already saved inside performRealAnalysis)
+    if (parsedData !== null) {
+      const { data: updatedDocument, error: updateError } = await supabase
+        .from('uploaded_documents')
+        .update({
+          parsed_data: parsedData,
+        })
+        .eq('id', body.documentId)
+        .select()
+        .single();
 
-    if (updateError) {
-      console.error('Database update error:', updateError);
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to save parsed data', details: updateError.message },
+          { status: 500 }
+        );
+      }
+
+      // Return success response
       return NextResponse.json(
-        { error: 'Failed to save parsed data', details: updateError.message },
-        { status: 500 }
+        {
+          documentId: updatedDocument.id,
+          parsedData: updatedDocument.parsed_data,
+          parsedAt: updatedDocument.created_at,
+          message: 'Document parsed successfully',
+        },
+        { status: 200 }
+      );
+    } else {
+      // For deunggibu documents, data was already saved inside performRealAnalysis
+      // Just fetch the document to return the response
+      const { data: document } = await supabase
+        .from('uploaded_documents')
+        .select('*')
+        .eq('id', body.documentId)
+        .single();
+
+      return NextResponse.json(
+        {
+          documentId: document.id,
+          parsedData: document.parsed_data,
+          parsedAt: document.created_at,
+          message: 'Document parsed successfully',
+        },
+        { status: 200 }
       );
     }
-
-    // Return success response
-    return NextResponse.json(
-      {
-        documentId: updatedDocument.id,
-        parsedData: updatedDocument.parsed_data,
-        parsedAt: updatedDocument.created_at,
-        message: 'Document parsed successfully',
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
