@@ -411,9 +411,17 @@ async function performRealAnalysis(
     return { success: true, ocrText, deunggibuData, riskAnalysis };
 
   } catch (error) {
-    console.error('Error in real analysis:', error);
+    console.error('❌ CRITICAL: Error in performRealAnalysis - falling back to mock data');
+    console.error('   Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('   Error message:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      console.error('   Stack trace:', error.stack);
+    }
+    console.error('   Analysis ID:', analysisId);
+    console.error('   This error causes all property valuation and deunggibu data to be lost!');
+
     // Fall back to mock analysis if real analysis fails
-    console.log('Falling back to mock analysis...');
+    console.log('⚠️  Falling back to mock analysis...');
     return generateMockRiskAnalysis(analysisId, proposedJeonse, address);
   }
 }
