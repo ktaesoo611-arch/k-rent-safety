@@ -29,7 +29,7 @@ export class MolitAPI {
             LAWD_CD: lawdCd,
             DEAL_YMD: dealYmd
           },
-          timeout: 10000
+          timeout: 30000  // Increased from 10s to 30s for Vercel production environment
         }
       );
 
