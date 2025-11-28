@@ -3,6 +3,8 @@
  * Used for structured address input in MOLIT API integration
  */
 
+import apartmentDatabaseJson from './apartment-database.json';
+
 export interface District {
   name: string;
   nameEn: string;
@@ -709,40 +711,21 @@ export const SEOUL_DISTRICTS: District[] = [
   }
 ];
 
-// Load comprehensive apartment database from MOLIT data
-let APARTMENT_DATABASE: Apartment[] | null = null;
-
 /**
  * Load comprehensive apartment database from generated JSON file
  * This contains ALL apartments in Seoul with recent transactions
  */
 function loadApartmentDatabase(): Apartment[] {
-  if (APARTMENT_DATABASE) {
-    return APARTMENT_DATABASE;
-  }
-
   try {
-    // In production, this would be loaded from the JSON file
-    // For now, we'll use dynamic import or fs.readFileSync in Node.js context
-    if (typeof window === 'undefined') {
-      // Server-side
-      const fs = require('fs');
-      const path = require('path');
-      const dbPath = path.join(process.cwd(), 'scripts', 'apartment-database.json');
-
-      if (fs.existsSync(dbPath)) {
-        const data = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-        APARTMENT_DATABASE = data.apartments;
-        console.log(`✅ Loaded ${APARTMENT_DATABASE?.length || 0} apartments from database`);
-        return APARTMENT_DATABASE || [];
-      }
-    }
+    // Use imported JSON data (works in both dev and production)
+    const apartments = apartmentDatabaseJson.apartments as Apartment[];
+    console.log(`✅ Loaded ${apartments.length} apartments from database`);
+    return apartments;
   } catch (error) {
     console.warn('Failed to load apartment database, falling back to hardcoded list:', error);
+    // Fallback to hardcoded list if database file not found
+    return SEOUL_APARTMENTS_FALLBACK;
   }
-
-  // Fallback to hardcoded list if database file not found
-  return SEOUL_APARTMENTS_FALLBACK;
 }
 
 /**

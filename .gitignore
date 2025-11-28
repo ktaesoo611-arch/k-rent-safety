@@ -45,3 +45,4 @@ credentials/
 !package-lock.json
 !tsconfig.json
 !next.config.js
+!lib/data/apartment-database.json
