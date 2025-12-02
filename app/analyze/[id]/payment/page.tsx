@@ -13,6 +13,8 @@ export default function PaymentPage() {
   const router = useRouter();
   const analysisId = params.id as string;
 
+  // Version: 2025-12-02-v2 - Force cache bust
+
   const [paymentWidget, setPaymentWidget] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
