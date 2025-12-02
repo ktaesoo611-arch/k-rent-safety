@@ -5,7 +5,7 @@
 
 ## Slide 1: Service Overview
 
-**Service Name:** Jeonse Safety Check
+**Service Name:** Jeonse Safety Checker
 **Website:** https://jeonse-safety-checker.vercel.app
 **Business:** 전세안전연구소 (Jeonse Safety Institute)
 **MID:** jeonsege3h

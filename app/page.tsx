@@ -394,7 +394,7 @@ export default function LandingPage() {
           <div className="text-center space-y-6">
             <div>
               <p className="text-gray-400 mb-4 font-medium">
-                Jeonse Safety Check © 2025. Jeonse safety analysis service for foreigners.
+                Jeonse Safety Checker © 2025. Jeonse safety analysis service for foreigners.
               </p>
               <p className="text-sm text-gray-500 leading-relaxed max-w-2xl mx-auto">
                 This service is for informational purposes and is not legal advice.<br />
