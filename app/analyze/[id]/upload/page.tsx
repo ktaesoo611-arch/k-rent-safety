@@ -45,40 +45,56 @@ export default function UploadPage() {
     }
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleUpload = async () => {
     if (!file) {
       alert('Please select a file');
       return;
     }
 
-    // Redirect immediately to processing page
-    router.push(`/analyze/${analysisId}/processing?uploadPending=true`);
+    try {
+      setIsUploading(true);
 
-    // Start upload in background (fire and forget)
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('analysisId', analysisId);
-    formData.append('documentType', 'deunggibu');
+      // Upload file and wait for completion
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('analysisId', analysisId);
+      formData.append('documentType', 'deunggibu');
 
-    fetch('/api/documents/upload', {
-      method: 'POST',
-      body: formData
-    })
-      .then(response => response.json())
-      .then(uploadData => {
-        if (uploadData.documentId) {
-          // Start parsing
-          return fetch('/api/documents/parse', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ documentId: uploadData.documentId })
-          });
-        }
-        throw new Error('Upload failed');
-      })
-      .catch(error => {
-        console.error('Background upload error:', error);
+      const uploadResponse = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData
       });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      if (uploadData.documentId) {
+        // Start parsing
+        const parseResponse = await fetch('/api/documents/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId: uploadData.documentId })
+        });
+
+        if (!parseResponse.ok) {
+          throw new Error('Failed to start document parsing');
+        }
+      }
+
+      // Only redirect after successful upload and parse
+      router.push(`/analyze/${analysisId}/processing`);
+
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setIsUploading(false);
+      alert(`Upload failed: ${error.message || 'Unknown error'}`);
+    }
   };
 
   return (
@@ -195,8 +211,16 @@ export default function UploadPage() {
                 size="lg"
                 className="w-full text-lg py-5"
                 onClick={handleUpload}
+                disabled={isUploading}
               >
-                Start analysis →
+                {isUploading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Uploading...
+                  </span>
+                ) : (
+                  'Start analysis →'
+                )}
               </Button>
             </div>
           )}
