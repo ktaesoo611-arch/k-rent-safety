@@ -81,17 +81,25 @@ export default function PaymentPage() {
   }, [analysisId]);
 
   const handlePayment = async () => {
+    console.log('=== handlePayment called ===');
+    console.log('PAYMENT_AMOUNT:', PAYMENT_AMOUNT);
+    console.log('orderData:', orderData);
+
     if (!orderData) {
+      console.log('No orderData, returning early');
       return;
     }
 
     try {
       // If payment amount is 0 (free beta), skip payment and go directly to analysis page
       if (PAYMENT_AMOUNT === 0) {
-        console.log('Free beta - redirecting to analysis page');
+        console.log('Free beta detected - redirecting to analysis page');
+        console.log('Redirecting to:', `/analyze/${analysisId}`);
         router.push(`/analyze/${analysisId}`);
         return;
       }
+
+      console.log('Payment amount is not 0, proceeding to Toss Payments');
 
       // Redirect to Toss Payments hosted payment page
       const paymentUrl = new URL('https://payment.toss.im/web/pay');
