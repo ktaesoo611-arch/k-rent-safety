@@ -86,6 +86,12 @@ export default function PaymentPage() {
     }
 
     try {
+      // If payment amount is 0 (free beta), skip payment and go directly to upload
+      if (PAYMENT_AMOUNT === 0) {
+        await handleSkipPayment();
+        return;
+      }
+
       // Redirect to Toss Payments hosted payment page
       const paymentUrl = new URL('https://payment.toss.im/web/pay');
 
@@ -195,14 +201,25 @@ export default function PaymentPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Pay Now</h2>
 
             <div className="space-y-4 mb-6">
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                <p className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">💳 Payment Method:</span> Credit/Debit Card
-                </p>
-                <p className="text-xs text-gray-600">
-                  Click the button below to open Toss Payments secure checkout
-                </p>
-              </div>
+              {PAYMENT_AMOUNT === 0 ? (
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <p className="text-sm text-gray-700 mb-2">
+                    <span className="font-semibold">🎉 Beta Free Trial:</span> No payment required
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Click the button below to continue with your free analysis
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <p className="text-sm text-gray-700 mb-2">
+                    <span className="font-semibold">💳 Payment Method:</span> Credit/Debit Card
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Click the button below to open Toss Payments secure checkout
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Payment Button */}
@@ -210,7 +227,7 @@ export default function PaymentPage() {
               onClick={handlePayment}
               className="w-full bg-emerald-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              Pay ₩{PAYMENT_AMOUNT.toLocaleString()}
+              {PAYMENT_AMOUNT === 0 ? 'Continue to Upload (Free)' : `Pay ₩${PAYMENT_AMOUNT.toLocaleString()}`}
             </button>
           </div>
         )}
