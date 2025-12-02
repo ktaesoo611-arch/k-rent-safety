@@ -107,7 +107,7 @@ export default function PaymentPage() {
       const paymentUrl = new URL('https://payment.toss.im/web/pay');
 
       paymentUrl.searchParams.append('clientKey', TOSS_CLIENT_KEY);
-      paymentUrl.searchParams.append('amount', PAYMENT_AMOUNT.toString());
+      paymentUrl.searchParams.append('amount', String(PAYMENT_AMOUNT));
       paymentUrl.searchParams.append('orderId', orderData.orderId);
       paymentUrl.searchParams.append('orderName', orderData.orderName);
       paymentUrl.searchParams.append('successUrl', `${window.location.origin}/analyze/${analysisId}/payment/success`);
@@ -196,7 +196,7 @@ export default function PaymentPage() {
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Amount</span>
             <span className="text-2xl font-bold text-blue-600">
-              ₩{PAYMENT_AMOUNT.toLocaleString()}
+              ₩{Number(PAYMENT_AMOUNT).toLocaleString()}
             </span>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function PaymentPage() {
               onClick={handlePayment}
               className="w-full bg-emerald-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              {PAYMENT_AMOUNT === 0 ? 'Continue to Upload (Free)' : `Pay ₩${PAYMENT_AMOUNT.toLocaleString()}`}
+              {PAYMENT_AMOUNT === 0 ? 'Continue to Upload (Free)' : `Pay ₩${Number(PAYMENT_AMOUNT).toLocaleString()}`}
             </button>
           </div>
         )}
