@@ -405,16 +405,16 @@ export default function LandingPage() {
 
             {/* Business Information */}
             <div className="border-t border-gray-800 pt-6">
-              <div className="text-sm text-gray-400 space-y-3 max-w-3xl mx-auto">
-                <p className="font-semibold text-gray-300">전세안전연구소 (Jeonse Safety Institute)</p>
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-1 text-left md:text-center">
-                  <p>대표자: 김태수 (Representative: Kim Tae-su)</p>
+              <div className="text-sm text-gray-400 max-w-4xl mx-auto">
+                <p className="font-semibold text-gray-300 mb-3 text-center">전세안전연구소 (Jeonse Safety Institute)</p>
+                <div className="space-y-2 text-center">
+                  <p>대표자: 김태수 (Representative: Kim Tae-soo)</p>
                   <p>사업자등록번호: 595-47-01161</p>
-                  <p className="md:col-span-2">사업장 주소: 서울특별시 중구 왕십리로 407, 101동 601호 (신당동, 신당파인힐하나유보라아파트)</p>
-                  <p className="md:col-span-2">Address: 101-601, 407 Wangsimni-ro, Jung-gu, Seoul, Republic of Korea</p>
-                  <p className="md:col-span-2">전화: 010-2382-8432 | Email: contact@jeonse-safety.com</p>
+                  <p>사업장 주소: 서울특별시 중구 왕십리로 407, 101동 601호 (신당동, 신당파인힐하나유보라아파트)</p>
+                  <p>Address: 101-601, 407 Wangsimni-ro, Jung-gu, Seoul, Republic of Korea</p>
+                  <p>전화: 010-2382-8432 | Email: contact@jeonse-safety.com</p>
                 </div>
-                <div className="pt-2">
+                <div className="mt-4 text-center">
                   <Link href="/terms" className="text-emerald-400 hover:text-emerald-300 underline">
                     Terms of Service & Refund Policy | 이용약관 및 환불정책
                   </Link>
