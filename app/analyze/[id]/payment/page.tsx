@@ -86,9 +86,10 @@ export default function PaymentPage() {
     }
 
     try {
-      // If payment amount is 0 (free beta), skip payment and go directly to upload
+      // If payment amount is 0 (free beta), skip payment and go directly to analysis page
       if (PAYMENT_AMOUNT === 0) {
-        await handleSkipPayment();
+        console.log('Free beta - redirecting to analysis page');
+        router.push(`/analyze/${analysisId}`);
         return;
       }
 
