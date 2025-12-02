@@ -391,15 +391,36 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 border-t border-gray-800">
         <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center">
-            <p className="text-gray-400 mb-4 font-medium">
-              Jeonse Safety Check © 2025. Jeonse safety analysis service for foreigners.
-            </p>
-            <p className="text-sm text-gray-500 leading-relaxed max-w-2xl mx-auto">
-              This service is for informational purposes and is not legal advice.<br />
-              Please consult with a professional before making important decisions.<br />
-              Based on Housing Lease Protection Act Enforcement Decree (effective March 1, 2025).
-            </p>
+          <div className="text-center space-y-6">
+            <div>
+              <p className="text-gray-400 mb-4 font-medium">
+                Jeonse Safety Check © 2025. Jeonse safety analysis service for foreigners.
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed max-w-2xl mx-auto">
+                This service is for informational purposes and is not legal advice.<br />
+                Please consult with a professional before making important decisions.<br />
+                Based on Housing Lease Protection Act Enforcement Decree (effective March 1, 2025).
+              </p>
+            </div>
+
+            {/* Business Information */}
+            <div className="border-t border-gray-800 pt-6">
+              <div className="text-sm text-gray-400 space-y-3 max-w-3xl mx-auto">
+                <p className="font-semibold text-gray-300">전세안전연구소 (Jeonse Safety Institute)</p>
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-1 text-left md:text-center">
+                  <p>대표자: 김태수 (Representative: Kim Tae-su)</p>
+                  <p>사업자등록번호: 595-47-01161</p>
+                  <p className="md:col-span-2">사업장 주소: 서울특별시 중구 왕십리로 407, 101동 601호 (신당동, 신당파인힐하나유보라아파트)</p>
+                  <p className="md:col-span-2">Address: 101-601, 407 Wangsimni-ro, Jung-gu, Seoul, Republic of Korea</p>
+                  <p className="md:col-span-2">전화: 010-2382-8432 | Email: contact@jeonse-safety.com</p>
+                </div>
+                <div className="pt-2">
+                  <Link href="/terms" className="text-emerald-400 hover:text-emerald-300 underline">
+                    Terms of Service & Refund Policy | 이용약관 및 환불정책
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
