@@ -106,7 +106,7 @@ export default function UploadPage() {
         {/* Page Header */}
         <div className="text-center mb-12">
           <div className="inline-block px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-sm font-semibold mb-6 border border-emerald-100">
-            Step 2 of 3
+            Step 3 of 4
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight" style={{ letterSpacing: '-0.03em' }}>
             Upload register document

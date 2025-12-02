@@ -76,7 +76,7 @@ export default function ProcessingPage() {
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="inline-block px-4 py-2 bg-emerald-100/10 backdrop-blur-sm border border-emerald-100/20 rounded-full text-sm font-semibold mb-6 text-emerald-100">
-            Step 3 of 3
+            Step 4 of 4
           </div>
 
           {/* Animated spinner */}

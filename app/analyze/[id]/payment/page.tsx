@@ -196,6 +196,9 @@ export default function PaymentPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <div className="inline-block px-4 py-2 bg-emerald-100 rounded-full text-sm font-semibold mb-4 text-emerald-700">
+            Step 2 of 4
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Payment
           </h1>
