@@ -97,6 +97,19 @@ export default function PaymentSuccessPage() {
               등기부등본 업로드 페이지로 이동합니다...
             </p>
 
+            {/* Order Number Display */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Order Number | 주문번호</p>
+              <p className="text-sm font-mono font-semibold text-gray-900">
+                {searchParams.get('orderId') || 'N/A'}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Please save this number for refund requests
+                <br />
+                환불 요청 시 필요한 번호이니 저장해 주세요
+              </p>
+            </div>
+
             <div className="bg-blue-50 rounded-xl p-4">
               <p className="text-sm text-blue-800">
                 💡 등기부등본을 업로드하시면 AI 분석이 시작됩니다

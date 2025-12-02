@@ -150,14 +150,21 @@ export default function TermsPage() {
               </p>
               <ol className="list-decimal list-inside text-gray-700 space-y-2 mb-4">
                 <li>Contact us at <strong>contact@jeonse-safety.com</strong> or call <strong>010-2382-8432</strong></li>
-                <li>Provide your order number and reason for refund request</li>
+                <li>Provide your <strong>order number</strong> (shown on payment success page) and reason for refund request</li>
                 <li>We will review your request within 1 business day</li>
                 <li>If approved, refunds will be processed within 3-5 business days</li>
               </ol>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-gray-700 leading-relaxed mb-2">
                 환불 요청 절차: contact@jeonse-safety.com 또는 010-2382-8432로 연락 →
-                주문번호 및 환불 사유 제공 → 1 영업일 내 검토 → 승인 시 3-5 영업일 내 환불 처리
+                주문번호(결제 완료 페이지에 표시) 및 환불 사유 제공 → 1 영업일 내 검토 → 승인 시 3-5 영업일 내 환불 처리
               </p>
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mt-4">
+                <p className="text-sm text-blue-900">
+                  <strong>Where to find your order number:</strong> Your order number is displayed on the payment success page after completing payment. Please save this number for your records.
+                  <br /><br />
+                  <strong>주문번호 확인:</strong> 주문번호는 결제 완료 페이지에 표시됩니다. 기록을 위해 저장해 주세요.
+                </p>
+              </div>
             </div>
           </section>
 
