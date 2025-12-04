@@ -61,25 +61,48 @@ export async function POST(request: NextRequest) {
     }
 
     // Use provided structured address data or parse from address string
-    const city = body.city || body.address.split(' ')[0] || '';
-    const district = body.district || body.address.split(' ')[1] || '';
-    const dong = body.dong || body.address.split(' ')[2] || '';
+    const city = body.city || body.address.split(' ')[0];
+    const district = body.district || body.address.split(' ')[1];
+    const dong = body.dong || body.address.split(' ')[2];
     const building = body.building || '';
+
+    // Validate required fields (city, district, dong are NOT NULL in database)
+    if (!city || !district || !dong) {
+      return NextResponse.json(
+        {
+          error: 'Invalid address format. City, district, and dong are required.',
+          details: `Missing: ${!city ? 'city ' : ''}${!district ? 'district ' : ''}${!dong ? 'dong' : ''}`
+        },
+        { status: 400 }
+      );
+    }
 
     // Create or find property
     let propertyId: string;
 
+    // Query for existing property - use maybeSingle() instead of single() to handle multiple matches
     const { data: existingProperty, error: findError } = await supabase
       .from('properties')
-      .select('id')
+      .select('id, building_name')
       .eq('address', body.address)
-      .single();
+      .is('building_number', null)
+      .is('floor', null)
+      .is('unit', null)
+      .maybeSingle();
+
+    if (findError) {
+      console.error('Property lookup error:', findError);
+      return NextResponse.json(
+        { error: 'Failed to lookup property', details: findError.message },
+        { status: 500 }
+      );
+    }
 
     if (existingProperty) {
       propertyId = existingProperty.id;
 
-      // Update building name if provided
-      if (building) {
+      // Update building name if provided and different
+      if (building && building !== existingProperty.building_name) {
         await supabase
           .from('properties')
           .update({ building_name: building })

@@ -18,20 +18,24 @@ export class OCRService {
 
     // Document AI requires service account credentials (API keys are not supported)
     // Support both file path (local dev) and JSON string (Vercel deployment)
-    const credentialsEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    // Support both GOOGLE_APPLICATION_CREDENTIALS (standard) and GOOGLE_VISION_CREDENTIALS_PATH (legacy)
+    const credentialsEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_VISION_CREDENTIALS_PATH;
 
     console.log('🔐 Initializing Google Document AI client...');
     console.log(`   Project ID: ${this.projectId}`);
     console.log(`   Processor ID: ${this.processorId}`);
     console.log(`   Credentials env var exists: ${!!credentialsEnv}`);
     console.log(`   Credentials env var length: ${credentialsEnv?.length || 0}`);
+    if (process.env.GOOGLE_VISION_CREDENTIALS_PATH && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      console.log('   ℹ️  Using legacy GOOGLE_VISION_CREDENTIALS_PATH (consider migrating to GOOGLE_APPLICATION_CREDENTIALS)');
+    }
 
     let clientConfig: any = {};
 
     if (!credentialsEnv || credentialsEnv.trim() === '') {
       // No credentials provided - this will fail in production
-      console.error('❌ GOOGLE_APPLICATION_CREDENTIALS is not set!');
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is required');
+      console.error('❌ Neither GOOGLE_APPLICATION_CREDENTIALS nor GOOGLE_VISION_CREDENTIALS_PATH is set!');
+      throw new Error('GOOGLE_APPLICATION_CREDENTIALS (or GOOGLE_VISION_CREDENTIALS_PATH) environment variable is required');
     }
 
     // Trim whitespace that might be added by Vercel
