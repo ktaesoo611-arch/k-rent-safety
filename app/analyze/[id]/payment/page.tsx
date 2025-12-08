@@ -19,6 +19,7 @@ export default function PaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<any>(null);
+  const [showPaymentWidget, setShowPaymentWidget] = useState(false);
 
   const paymentMethodsRef = useRef<HTMLDivElement>(null);
   const agreementRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,33 @@ export default function PaymentPage() {
     initializePayment();
   }, [analysisId]);
 
+  // Render payment widget when showPaymentWidget becomes true
+  useEffect(() => {
+    if (showPaymentWidget && paymentWidget && paymentMethodsRef.current && agreementRef.current) {
+      async function renderWidget() {
+        try {
+          console.log('Rendering payment widget...');
+
+          // Render payment methods
+          await paymentWidget.renderPaymentMethods(
+            paymentMethodsRef.current,
+            { value: 14900 }
+          );
+
+          // Render agreement
+          await paymentWidget.renderAgreement(agreementRef.current);
+
+          console.log('Payment widget rendered successfully');
+        } catch (err: any) {
+          console.error('Failed to render payment widget:', err);
+          setError(`Failed to render payment widget: ${err.message}`);
+        }
+      }
+
+      renderWidget();
+    }
+  }, [showPaymentWidget, paymentWidget]);
+
   const handlePayment = async (amount: number = PAYMENT_AMOUNT) => {
     console.log('=== handlePayment called ===');
     console.log('Payment amount:', amount);
@@ -123,6 +151,22 @@ export default function PaymentPage() {
       if (!paymentWidget) {
         throw new Error('Payment widget not initialized');
       }
+
+      // Show the payment widget UI
+      setShowPaymentWidget(true);
+    } catch (err: any) {
+      console.error('Payment request failed:', err);
+      setError(err.message || 'Payment request failed.');
+    }
+  };
+
+  const handlePaymentWidgetSubmit = async () => {
+    try {
+      if (!paymentWidget || !orderData) {
+        throw new Error('Payment widget not ready');
+      }
+
+      console.log('Requesting payment...');
 
       // Use Toss Payment Widget SDK requestPayment method
       await paymentWidget.requestPayment({
@@ -225,45 +269,81 @@ export default function PaymentPage() {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Pay Now</h2>
 
-            <div className="space-y-4 mb-6">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">💳 Test Payment Integration:</span> For Toss Payments Review
-                </p>
-                <p className="text-xs text-gray-600">
-                  Click "Test Payment" to see Toss Payments checkout integration
-                </p>
-              </div>
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                <p className="text-sm text-gray-700 mb-2">
-                  <span className="font-semibold">🎉 Beta Free Trial:</span> No payment required
-                </p>
-                <p className="text-xs text-gray-600">
-                  Click "Continue Free" to use the service without payment during beta
-                </p>
-              </div>
-            </div>
+            {!showPaymentWidget ? (
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold">💳 Test Payment Integration:</span> For Toss Payments Review
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Click "Test Payment" to see Toss Payments checkout integration
+                    </p>
+                  </div>
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold">🎉 Beta Free Trial:</span> No payment required
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Click "Continue Free" to use the service without payment during beta
+                    </p>
+                  </div>
+                </div>
 
-            {/* Payment Buttons */}
-            <div className="space-y-3">
-              {/* Test Payment Button - For Toss Demo */}
-              <button
-                onClick={() => handlePayment(14900)}
-                className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-              >
-                <span>💳</span>
-                <span>Test Payment (₩14,900)</span>
-              </button>
+                {/* Payment Buttons */}
+                <div className="space-y-3">
+                  {/* Test Payment Button - For Toss Demo */}
+                  <button
+                    onClick={() => handlePayment(14900)}
+                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  >
+                    <span>💳</span>
+                    <span>Test Payment (₩14,900)</span>
+                  </button>
 
-              {/* Free Beta Button */}
-              <button
-                onClick={() => handlePayment(0)}
-                className="w-full bg-emerald-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-              >
-                <span>🎉</span>
-                <span>Continue Free (Beta)</span>
-              </button>
-            </div>
+                  {/* Free Beta Button */}
+                  <button
+                    onClick={() => handlePayment(0)}
+                    className="w-full bg-emerald-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  >
+                    <span>🎉</span>
+                    <span>Continue Free (Beta)</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Toss Payment Widget UI */}
+                <div className="space-y-6">
+                  {/* Payment Methods */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
+                    <div ref={paymentMethodsRef} className="min-h-[200px]"></div>
+                  </div>
+
+                  {/* Agreement */}
+                  <div>
+                    <div ref={agreementRef}></div>
+                  </div>
+
+                  {/* Payment Button */}
+                  <button
+                    onClick={handlePaymentWidgetSubmit}
+                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Pay ₩14,900
+                  </button>
+
+                  {/* Back Button */}
+                  <button
+                    onClick={() => setShowPaymentWidget(false)}
+                    className="w-full bg-gray-200 text-gray-700 text-sm font-medium px-6 py-3 rounded-xl hover:bg-gray-300 transition-colors"
+                  >
+                    ← Back to Options
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
