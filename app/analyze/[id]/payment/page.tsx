@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
+import { loadPaymentWidget } from '@tosspayments/payment-widget-sdk';
 
 const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY || '';
 const PAYMENT_AMOUNT = 0; // Free during beta period - Updated 2025-12-02
@@ -56,14 +56,14 @@ export default function PaymentPage() {
         console.log('Payment order created:', data);
         setOrderData(data.payment);
 
-        // Load Toss Payments SDK (for Payment Window, not Widget)
-        console.log('Loading Toss Payments SDK...');
-        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY);
-        console.log('Toss Payments SDK loaded');
-        console.log('Available methods:', Object.keys(tossPayments));
-        console.log('TossPayments object:', tossPayments);
+        // Load Toss Payments Widget SDK
+        console.log('Loading Toss Payment Widget...');
+        const paymentWidget = await loadPaymentWidget(TOSS_CLIENT_KEY, `customer_${analysisId}`);
+        console.log('Payment Widget loaded');
+        console.log('Available methods:', Object.keys(paymentWidget));
+        console.log('PaymentWidget object:', paymentWidget);
 
-        setPaymentWidget(tossPayments);
+        setPaymentWidget(paymentWidget);
 
         console.log('Payment initialization complete');
         setIsLoading(false);
@@ -124,15 +124,14 @@ export default function PaymentPage() {
         throw new Error('Payment widget not initialized');
       }
 
-      // Use Toss Payments SDK requestPayment method
-      await paymentWidget.requestPayment('카드', {
-        amount: amount,
+      // Use Toss Payment Widget SDK requestPayment method
+      await paymentWidget.requestPayment({
         orderId: orderData.orderId,
         orderName: orderData.orderName,
         successUrl: `${window.location.origin}/analyze/${analysisId}/payment/success`,
         failUrl: `${window.location.origin}/analyze/${analysisId}/payment/fail`,
-        customerEmail: orderData.customerEmail,
-        customerName: orderData.customerName,
+        customerEmail: orderData.customerEmail || undefined,
+        customerName: orderData.customerName || undefined,
       });
     } catch (err: any) {
       console.error('Payment request failed:', err);
