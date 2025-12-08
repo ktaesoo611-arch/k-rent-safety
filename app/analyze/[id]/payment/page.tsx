@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { loadPaymentWidget } from '@tosspayments/payment-widget-sdk';
 
@@ -20,9 +20,6 @@ export default function PaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<any>(null);
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
-
-  const paymentMethodsRef = useRef<HTMLDivElement>(null);
-  const agreementRef = useRef<HTMLDivElement>(null);
 
   // Initialize payment widget
   useEffect(() => {
@@ -85,19 +82,19 @@ export default function PaymentPage() {
 
   // Render payment widget when showPaymentWidget becomes true
   useEffect(() => {
-    if (showPaymentWidget && paymentWidget && paymentMethodsRef.current && agreementRef.current) {
+    if (showPaymentWidget && paymentWidget) {
       async function renderWidget() {
         try {
           console.log('Rendering payment widget...');
 
-          // Render payment methods
+          // Render payment methods - use selector string
           await paymentWidget.renderPaymentMethods(
-            paymentMethodsRef.current,
+            '#payment-method',
             { value: 14900 }
           );
 
-          // Render agreement
-          await paymentWidget.renderAgreement(agreementRef.current);
+          // Render agreement - use selector string
+          await paymentWidget.renderAgreement('#agreement');
 
           console.log('Payment widget rendered successfully');
         } catch (err: any) {
@@ -318,12 +315,12 @@ export default function PaymentPage() {
                   {/* Payment Methods */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
-                    <div ref={paymentMethodsRef} className="min-h-[200px]"></div>
+                    <div id="payment-method" className="min-h-[200px]"></div>
                   </div>
 
                   {/* Agreement */}
                   <div>
-                    <div ref={agreementRef}></div>
+                    <div id="agreement"></div>
                   </div>
 
                   {/* Payment Button */}
