@@ -120,25 +120,24 @@ export default function PaymentPage() {
 
       console.log('Proceeding to Toss Payments with amount:', amount);
 
-      // Redirect to Toss Payments hosted payment page
-      const paymentUrl = new URL('https://payment.toss.im/web/pay');
-
-      paymentUrl.searchParams.append('clientKey', TOSS_CLIENT_KEY);
-      paymentUrl.searchParams.append('amount', String(amount));
-      paymentUrl.searchParams.append('orderId', orderData.orderId);
-      paymentUrl.searchParams.append('orderName', orderData.orderName);
-      paymentUrl.searchParams.append('successUrl', `${window.location.origin}/analyze/${analysisId}/payment/success`);
-      paymentUrl.searchParams.append('failUrl', `${window.location.origin}/analyze/${analysisId}/payment/fail`);
-
-      if (orderData.customerEmail) {
-        paymentUrl.searchParams.append('customerEmail', orderData.customerEmail);
-      }
-      if (orderData.customerName) {
-        paymentUrl.searchParams.append('customerName', orderData.customerName);
+      if (!paymentWidget) {
+        throw new Error('Payment widget not initialized');
       }
 
-      // Redirect to Toss Payments
-      window.location.href = paymentUrl.toString();
+      // Use Toss Payments SDK requestPayment method
+      await paymentWidget.requestPayment({
+        method: 'CARD', // 카드 결제
+        amount: {
+          currency: 'KRW',
+          value: amount,
+        },
+        orderId: orderData.orderId,
+        orderName: orderData.orderName,
+        successUrl: `${window.location.origin}/analyze/${analysisId}/payment/success`,
+        failUrl: `${window.location.origin}/analyze/${analysisId}/payment/fail`,
+        customerEmail: orderData.customerEmail,
+        customerName: orderData.customerName,
+      });
     } catch (err: any) {
       console.error('Payment request failed:', err);
       setError(err.message || 'Payment request failed.');
