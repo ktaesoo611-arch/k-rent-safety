@@ -125,12 +125,8 @@ export default function PaymentPage() {
       }
 
       // Use Toss Payments SDK requestPayment method
-      await paymentWidget.requestPayment({
-        method: 'CARD', // 카드 결제
-        amount: {
-          currency: 'KRW',
-          value: amount,
-        },
+      await paymentWidget.requestPayment('카드', {
+        amount: amount,
         orderId: orderData.orderId,
         orderName: orderData.orderName,
         successUrl: `${window.location.origin}/analyze/${analysisId}/payment/success`,
