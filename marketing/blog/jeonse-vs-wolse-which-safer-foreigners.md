@@ -111,15 +111,15 @@ Let's compare actual costs for a ₩300M apartment over 2 years.
 ```
 Deposit: ₩200,000,000
 Monthly rent: ₩0
-Contract fee: ₩800,000 (0.4% of deposit)
+Contract fee: ₩600,000 (0.3% of ₩200M)
 Utilities: ₩150,000/month × 24 = ₩3,600,000
 Moving costs: ₩500,000 × 2 = ₩1,000,000
 ────────────────────────────────────────
-Total out-of-pocket: ₩5,400,000
+Total out-of-pocket: ₩5,200,000
 
 Opportunity cost: ₩200M × 3.5% annual return × 2 years = ₩14,000,000
 ────────────────────────────────────────
-TRUE TOTAL COST: ₩19,400,000
+TRUE TOTAL COST: ₩19,200,000
 ```
 
 ### Scenario 2: Wolse
@@ -127,15 +127,15 @@ TRUE TOTAL COST: ₩19,400,000
 ```
 Deposit: ₩30,000,000
 Monthly rent: ₩1,200,000 × 24 = ₩28,800,000
-Contract fee: ₩120,000 (0.4% of deposit)
+Contract fee: ₩450,000 (0.3% of ₩150M equivalent)
 Utilities: ₩150,000/month × 24 = ₩3,600,000
 Moving costs: ₩500,000 × 2 = ₩1,000,000
 ────────────────────────────────────────
-Total out-of-pocket: ₩33,520,000
+Total out-of-pocket: ₩33,850,000
 
 Opportunity cost: ₩30M × 3.5% annual return × 2 years = ₩2,100,000
 ────────────────────────────────────────
-TRUE TOTAL COST: ₩35,620,000
+TRUE TOTAL COST: ₩35,950,000
 ```
 
 ### Scenario 3: Ban-Jeonse
@@ -143,20 +143,20 @@ TRUE TOTAL COST: ₩35,620,000
 ```
 Deposit: ₩100,000,000
 Monthly rent: ₩600,000 × 24 = ₩14,400,000
-Contract fee: ₩400,000 (0.4% of deposit)
+Contract fee: ₩480,000 (0.3% of ₩160M equivalent)
 Utilities: ₩150,000/month × 24 = ₩3,600,000
 Moving costs: ₩500,000 × 2 = ₩1,000,000
 ────────────────────────────────────────
-Total out-of-pocket: ₩19,400,000
+Total out-of-pocket: ₩19,480,000
 
 Opportunity cost: ₩100M × 3.5% annual return × 2 years = ₩7,000,000
 ────────────────────────────────────────
-TRUE TOTAL COST: ₩26,400,000
+TRUE TOTAL COST: ₩26,480,000
 ```
 
 ### Cost Winner: Jeonse
 
-**If deposit is returned safely**, jeonse costs ₩19.4M vs wolse ₩35.6M - **saving ₩16.2M over 2 years.**
+**If deposit is returned safely**, jeonse costs ₩19.2M vs wolse ₩35.95M - **saving ₩16.75M over 2 years.**
 
 **BUT:** This assumes:
 ✅ You have ₩200M available
@@ -685,6 +685,18 @@ Wolse true cost = Deposit opportunity cost + Contract fee + Monthly rent + Utili
 If Jeonse cost < Wolse cost × 0.7: Strong financial case for jeonse
 If Jeonse cost < Wolse cost × 0.85: Moderate case for jeonse
 If Jeonse cost > Wolse cost × 0.85: Weak financial case, consider other factors
+
+Note: Contract fee calculation (per Korean law):
+1. Calculate: Deposit + Monthly rent × 100
+2. If result < 50M won:
+   Fee = (Deposit + Monthly rent × 70) × 0.5% (max 200,000 won)
+3. If result ≥ 50M won:
+   Fee = (Deposit + Monthly rent × 100) × rate based on amount:
+   - 50M-100M: 0.4% (max 300,000 won)
+   - 100M-600M: 0.3%
+   - 600M-1.2B: 0.4%
+   - 1.2B-1.5B: 0.5%
+   - Over 1.5B: 0.6%
 ```
 
 ### Safety Verification

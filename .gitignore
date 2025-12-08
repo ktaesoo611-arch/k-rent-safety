@@ -46,3 +46,5 @@ credentials/
 !tsconfig.json
 !next.config.js
 !lib/data/apartment-database.json
+
+.vercel
