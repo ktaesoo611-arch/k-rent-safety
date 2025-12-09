@@ -3,9 +3,9 @@
  * Fetches all apartments with transactions in the last 12 months
  */
 
-import { MolitAPI, getDistrictCode } from '../lib/apis/molit';
-import { SEOUL_DISTRICTS } from '../lib/data/address-data';
-import { generateApartmentEnglishName } from '../lib/utils/korean-transliteration';
+import { MolitAPI, getDistrictCode } from '../../lib/apis/molit';
+import { SEOUL_DISTRICTS } from '../../lib/data/address-data';
+import { generateApartmentEnglishName } from '../../lib/utils/korean-transliteration';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 
@@ -135,7 +135,7 @@ async function buildApartmentDatabase() {
   }
 
   // Save to JSON file
-  const outputPath = 'scripts/apartment-database.json';
+  const outputPath = '../../lib/data/apartment-database.json';
   const output = {
     generatedAt: new Date().toISOString(),
     months: months,
