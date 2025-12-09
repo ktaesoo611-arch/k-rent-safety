@@ -427,7 +427,6 @@ export const SEOUL_DISTRICTS: District[] = [
     nameEn: 'Yeongdeungpo-gu',
     code: '11560',
     dongs: [
-      { name: '경인로', nameEn: 'Gyeongin-ro' },
       { name: '당산동', nameEn: 'Dangsan-dong' },
       { name: '당산동1가', nameEn: 'Dangsan-dong 1-ga' },
       { name: '당산동2가', nameEn: 'Dangsan-dong 2-ga' },
@@ -437,6 +436,7 @@ export const SEOUL_DISTRICTS: District[] = [
       { name: '당산동6가', nameEn: 'Dangsan-dong 6-ga' },
       { name: '대림동', nameEn: 'Daerim-dong' },
       { name: '도림동', nameEn: 'Dorim-dong' },
+      { name: '신길동', nameEn: 'Singil-dong' },
       { name: '문래동', nameEn: 'Mullae-dong' },
       { name: '문래동1가', nameEn: 'Mullae-dong 1-ga' },
       { name: '문래동2가', nameEn: 'Mullae-dong 2-ga' },
