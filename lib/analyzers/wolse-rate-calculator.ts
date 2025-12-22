@@ -22,6 +22,8 @@ export interface MarketRateResult {
   rate25thPercentile: number;
   rate75thPercentile: number;
   confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
+  dataSource: 'building' | 'dong' | 'district';
+  dataSourceNote: string;
   contractCount: number;
   validPairCount: number;
   trend: {
@@ -93,6 +95,16 @@ export class WolseRateCalculator {
       confidenceLevel = 'LOW';
     }
 
+    // Generate data source note
+    const getDataSourceNote = (source: string, count: number, building: string, dongName: string): string => {
+      if (source === 'building') {
+        return `Based on ${count} transactions from "${building}" building`;
+      } else if (source === 'dong') {
+        return `Based on ${count} transactions from ${dongName} area (building-specific data insufficient)`;
+      }
+      return `Based on ${count} transactions from the district`;
+    };
+
     // Step 3: Check if we have sufficient data
     if (transactions.length < 5) {
       console.log(`\n❌ Insufficient data: only ${transactions.length} transactions found`);
@@ -101,6 +113,8 @@ export class WolseRateCalculator {
         rate25thPercentile: LEGAL_CAP,
         rate75thPercentile: LEGAL_CAP,
         confidenceLevel: 'INSUFFICIENT',
+        dataSource: dataSource as 'building' | 'dong' | 'district',
+        dataSourceNote: `Insufficient data: only ${transactions.length} transactions found in ${dong} area`,
         contractCount: transactions.length,
         validPairCount: 0,
         trend: {
@@ -131,6 +145,8 @@ export class WolseRateCalculator {
         rate25thPercentile: baselineRate || LEGAL_CAP,
         rate75thPercentile: baselineRate || LEGAL_CAP,
         confidenceLevel: 'LOW',
+        dataSource: dataSource as 'building' | 'dong' | 'district',
+        dataSourceNote: getDataSourceNote(dataSource, transactions.length, apartmentName, dong) + ' (no valid rate pairs for comparison)',
         contractCount: transactions.length,
         validPairCount: 0,
         trend: {
@@ -161,6 +177,8 @@ export class WolseRateCalculator {
       rate25thPercentile: marketRateStats.percentile25,
       rate75thPercentile: marketRateStats.percentile75,
       confidenceLevel,
+      dataSource: dataSource as 'building' | 'dong' | 'district',
+      dataSourceNote: getDataSourceNote(dataSource, transactions.length, apartmentName, dong),
       contractCount: transactions.length,
       validPairCount: ratePairs.length,
       trend,

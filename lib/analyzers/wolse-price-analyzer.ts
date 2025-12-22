@@ -153,6 +153,8 @@ export class WolsePriceAnalyzer {
       },
       legalRate: marketData.legalRate,
       confidenceLevel: marketData.confidenceLevel,
+      dataSource: marketData.dataSource,
+      dataSourceNote: marketData.dataSourceNote,
       contractCount: marketData.contractCount,
       cleanTransactionCount: rentComparison.cleanTransactionCount,
       outliersRemoved: rentComparison.outliersRemoved,

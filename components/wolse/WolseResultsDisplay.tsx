@@ -168,7 +168,7 @@ export function WolseResultsDisplay({ result, onNewAnalysis }: WolseResultsDispl
             <p className="text-sm text-[#718096] mb-1">Data Quality</p>
             <p className="text-xl font-bold text-[#1A202C]">{result.confidenceLevel}</p>
             <p className="text-xs text-[#A0AEC0]">
-              {result.cleanTransactionCount || result.contractCount} transactions
+              {result.dataSourceNote || `${result.cleanTransactionCount || result.contractCount} transactions`}
               {result.outliersRemoved ? ` (${result.outliersRemoved} outliers removed)` : ''}
             </p>
           </div>
@@ -273,7 +273,8 @@ export function WolseResultsDisplay({ result, onNewAnalysis }: WolseResultsDispl
             </table>
           </div>
           <p className="mt-4 text-sm text-[#718096]">
-            Confidence: <strong className="text-[#1A202C]">{result.confidenceLevel}</strong> (based on {result.contractCount} contracts)
+            Confidence: <strong className="text-[#1A202C]">{result.confidenceLevel}</strong>
+            {result.dataSourceNote && <span className="block mt-1 text-xs">{result.dataSourceNote}</span>}
           </p>
         </div>
       )}
