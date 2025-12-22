@@ -35,8 +35,8 @@ export function Select({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={`
-          w-full px-4 py-3 rounded-xl border-2 bg-white
-          ${error ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-emerald-600'}
+          w-full px-4 py-3 rounded-xl border-2 bg-white text-gray-900
+          ${error ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-amber-500'}
           focus:outline-none focus:ring-0 transition-colors
           disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500
           ${className}
