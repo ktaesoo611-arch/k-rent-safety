@@ -25,6 +25,8 @@ export interface MarketRateResult {
   dataSource: 'building' | 'dong' | 'district';
   dataSourceNote: string;
   contractCount: number;
+  cleanTransactionCount: number;
+  outliersRemoved: number;
   validPairCount: number;
   trend: {
     direction: 'RISING' | 'STABLE' | 'DECLINING';
@@ -47,6 +49,53 @@ export class WolseRateCalculator {
 
   constructor(apiKey: string) {
     this.wolseAPI = new MolitWolseAPI(apiKey);
+  }
+
+  /**
+   * Remove outliers from transactions using IQR method
+   * Outliers are transactions where deposit OR rent falls outside 1.5×IQR
+   */
+  private removeOutliers(transactions: WolseTransaction[]): {
+    clean: WolseTransaction[];
+    removed: WolseTransaction[];
+  } {
+    if (transactions.length < 4) {
+      return { clean: transactions, removed: [] };
+    }
+
+    // Calculate IQR for deposits
+    const sortedDeposits = [...transactions].sort((a, b) => a.deposit - b.deposit);
+    const q1DepositIdx = Math.floor(transactions.length * 0.25);
+    const q3DepositIdx = Math.floor(transactions.length * 0.75);
+    const q1Deposit = sortedDeposits[q1DepositIdx].deposit;
+    const q3Deposit = sortedDeposits[q3DepositIdx].deposit;
+    const iqrDeposit = q3Deposit - q1Deposit;
+    const depositLower = q1Deposit - 1.5 * iqrDeposit;
+    const depositUpper = q3Deposit + 1.5 * iqrDeposit;
+
+    // Calculate IQR for rents
+    const sortedRents = [...transactions].sort((a, b) => a.monthlyRent - b.monthlyRent);
+    const q1Rent = sortedRents[q1DepositIdx].monthlyRent;
+    const q3Rent = sortedRents[q3DepositIdx].monthlyRent;
+    const iqrRent = q3Rent - q1Rent;
+    const rentLower = q1Rent - 1.5 * iqrRent;
+    const rentUpper = q3Rent + 1.5 * iqrRent;
+
+    const clean: WolseTransaction[] = [];
+    const removed: WolseTransaction[] = [];
+
+    for (const t of transactions) {
+      const depositOutlier = t.deposit < depositLower || t.deposit > depositUpper;
+      const rentOutlier = t.monthlyRent < rentLower || t.monthlyRent > rentUpper;
+
+      if (depositOutlier || rentOutlier) {
+        removed.push(t);
+      } else {
+        clean.push(t);
+      }
+    }
+
+    return { clean, removed };
   }
 
   /**
@@ -95,16 +144,6 @@ export class WolseRateCalculator {
       confidenceLevel = 'LOW';
     }
 
-    // Generate data source note
-    const getDataSourceNote = (source: string, count: number, building: string, dongName: string): string => {
-      if (source === 'building') {
-        return `Based on ${count} transactions from "${building}" building`;
-      } else if (source === 'dong') {
-        return `Based on ${count} transactions from ${dongName} area (building-specific data insufficient)`;
-      }
-      return `Based on ${count} transactions from the district`;
-    };
-
     // Step 3: Check if we have sufficient data
     if (transactions.length < 5) {
       console.log(`\n❌ Insufficient data: only ${transactions.length} transactions found`);
@@ -116,6 +155,8 @@ export class WolseRateCalculator {
         dataSource: dataSource as 'building' | 'dong' | 'district',
         dataSourceNote: `Insufficient data: only ${transactions.length} transactions found in ${dong} area`,
         contractCount: transactions.length,
+        cleanTransactionCount: transactions.length,
+        outliersRemoved: 0,
         validPairCount: 0,
         trend: {
           direction: 'STABLE',
@@ -127,27 +168,45 @@ export class WolseRateCalculator {
       };
     }
 
+    // Step 4: Remove outliers using IQR method
+    const { clean: cleanTransactions, removed: outlierTransactions } = this.removeOutliers(transactions);
+    const outliersRemoved = outlierTransactions.length;
+    console.log(`\n🔍 Outlier removal: ${transactions.length} → ${cleanTransactions.length} (${outliersRemoved} outliers removed)`);
+
     // Update confidence based on count
     if (dataSource === 'building') {
-      confidenceLevel = transactions.length >= 10 ? 'HIGH' : 'MEDIUM';
+      confidenceLevel = cleanTransactions.length >= 10 ? 'HIGH' : 'MEDIUM';
     }
 
-    // Step 4: Calculate implied conversion rates from transaction pairs
-    const ratePairs = this.calculateConversionRatePairs(transactions);
+    // Generate data source note
+    const getDataSourceNote = (source: string, count: number, cleanCount: number, outliers: number, building: string, dongName: string): string => {
+      const outlierNote = outliers > 0 ? ` (${outliers} outliers removed)` : '';
+      if (source === 'building') {
+        return `Based on ${cleanCount} transactions from "${building}" building${outlierNote}`;
+      } else if (source === 'dong') {
+        return `Based on ${cleanCount} transactions from ${dongName} area (building-specific data insufficient)${outlierNote}`;
+      }
+      return `Based on ${cleanCount} transactions from the district${outlierNote}`;
+    };
+
+    // Step 5: Calculate implied conversion rates from transaction pairs (using clean transactions)
+    const ratePairs = this.calculateConversionRatePairs(cleanTransactions);
     console.log(`\n📈 Calculated ${ratePairs.length} valid rate pairs`);
 
     if (ratePairs.length === 0) {
       // Can't calculate market rate from pairs - use baseline method
       console.log('⚠️ No valid pairs. Using baseline calculation method.');
-      const baselineRate = this.calculateBaselineRate(transactions);
+      const baselineRate = this.calculateBaselineRate(cleanTransactions);
       return {
         marketRate: baselineRate || LEGAL_CAP,
         rate25thPercentile: baselineRate || LEGAL_CAP,
         rate75thPercentile: baselineRate || LEGAL_CAP,
         confidenceLevel: 'LOW',
         dataSource: dataSource as 'building' | 'dong' | 'district',
-        dataSourceNote: getDataSourceNote(dataSource, transactions.length, apartmentName, dong) + ' (no valid rate pairs for comparison)',
+        dataSourceNote: getDataSourceNote(dataSource, transactions.length, cleanTransactions.length, outliersRemoved, apartmentName, dong) + ' (no valid rate pairs for comparison)',
         contractCount: transactions.length,
+        cleanTransactionCount: cleanTransactions.length,
+        outliersRemoved,
         validPairCount: 0,
         trend: {
           direction: 'STABLE',
@@ -155,20 +214,21 @@ export class WolseRateCalculator {
           rSquared: 0
         },
         legalRate: LEGAL_CAP,
-        transactions
+        transactions: cleanTransactions
       };
     }
 
-    // Step 5: Calculate time-weighted market rate
+    // Step 6: Calculate time-weighted market rate
     const marketRateStats = this.calculateWeightedMarketRate(ratePairs);
 
-    // Step 6: Calculate trend using linear regression
+    // Step 7: Calculate trend using linear regression
     const trend = this.calculateTrend(ratePairs);
 
     console.log('\n✅ Market Rate Calculation Complete:');
     console.log(`   Market Rate: ${marketRateStats.median.toFixed(2)}%`);
     console.log(`   Range: ${marketRateStats.percentile25.toFixed(2)}% - ${marketRateStats.percentile75.toFixed(2)}%`);
     console.log(`   Legal Cap: ${LEGAL_CAP}%`);
+    console.log(`   Transactions: ${cleanTransactions.length}/${transactions.length} (${outliersRemoved} outliers removed)`);
     console.log(`   Confidence: ${confidenceLevel}`);
     console.log(`   Trend: ${trend.direction} (${trend.percentage.toFixed(1)}%)`);
 
@@ -178,12 +238,14 @@ export class WolseRateCalculator {
       rate75thPercentile: marketRateStats.percentile75,
       confidenceLevel,
       dataSource: dataSource as 'building' | 'dong' | 'district',
-      dataSourceNote: getDataSourceNote(dataSource, transactions.length, apartmentName, dong),
+      dataSourceNote: getDataSourceNote(dataSource, transactions.length, cleanTransactions.length, outliersRemoved, apartmentName, dong),
       contractCount: transactions.length,
+      cleanTransactionCount: cleanTransactions.length,
+      outliersRemoved,
       validPairCount: ratePairs.length,
       trend,
       legalRate: LEGAL_CAP,
-      transactions
+      transactions: cleanTransactions
     };
   }
 
