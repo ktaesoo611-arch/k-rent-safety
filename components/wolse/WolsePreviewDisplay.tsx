@@ -88,8 +88,8 @@ export function WolsePreviewDisplay({ result, onUnlock, isLoading }: WolsePrevie
               {assessmentStyle.label}
             </h2>
             <p className="text-[#4A5568] text-lg leading-relaxed">
-              {result.assessment === 'GOOD_DEAL' && 'Your rent is below market expectation. This is a good deal!'}
-              {result.assessment === 'FAIR' && 'Your rent is close to the market expectation. This is a fair price.'}
+              {result.assessment === 'GOOD_DEAL' && 'Your rent is below market expectation. Lock in this rate and negotiate other terms!'}
+              {result.assessment === 'FAIR' && 'Your rent is at market expectation. Focus on negotiating contract terms.'}
               {result.assessment === 'OVERPRICED' && 'Your rent is above market expectation. There may be room for negotiation.'}
               {result.assessment === 'SEVERELY_OVERPRICED' && 'Your rent is significantly above market. Strong negotiation is recommended.'}
             </p>

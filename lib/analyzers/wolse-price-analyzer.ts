@@ -354,7 +354,7 @@ export class WolsePriceAnalyzer {
       // Paying 10%+ less than expected
       return {
         level: 'GOOD_DEAL',
-        details: `Excellent! You're paying ${formatWon(Math.abs(rentDifference))}/month less than the market expectation of ${formatWon(expectedRent)}. This is ${Math.abs(rentDifferencePercent).toFixed(0)}% below market rate.`
+        details: `Great find! You're paying ${formatWon(Math.abs(rentDifference))}/month less than the market expectation of ${formatWon(expectedRent)}. Consider locking in this rate with a longer lease and negotiating other terms like repairs or appliances.`
       };
     }
 
@@ -363,12 +363,12 @@ export class WolsePriceAnalyzer {
       if (rentDifference <= 0) {
         return {
           level: 'FAIR',
-          details: `Your rent of ${formatWon(actualRent)} is at or slightly below the market expectation of ${formatWon(expectedRent)}. This is a fair deal.`
+          details: `Your rent of ${formatWon(actualRent)} is at or below the market expectation of ${formatWon(expectedRent)}. Focus on negotiating contract terms (lease length, repairs, deposit payment schedule) rather than price.`
         };
       }
       return {
         level: 'FAIR',
-        details: `Your rent of ${formatWon(actualRent)} is close to the market expectation of ${formatWon(expectedRent)} (+${formatWon(rentDifference)}). This is within normal range.`
+        details: `Your rent of ${formatWon(actualRent)} is close to the market expectation of ${formatWon(expectedRent)} (+${formatWon(rentDifference)}). Minor room for negotiation exists.`
       };
     }
 
@@ -458,18 +458,45 @@ export class WolsePriceAnalyzer {
     // Format amounts for display
     const formatWon = (amount: number) => `${(amount / 10000).toLocaleString()}만원`;
 
-    // If user is already paying at or below market expectation, no negotiation needed
+    // If user is already paying at or below market expectation, provide strategic advice
     if (rentDifferencePercent <= 0) {
-      return [{
-        name: 'Current Quote',
+      const options: WolseNegotiationOption[] = [];
+
+      // Option 1: Accept and lock in with longer lease
+      options.push({
+        name: 'Accept & Lock In',
         rate: marketRate,
         deposit: quote.deposit,
         monthlyRent: quote.monthlyRent,
         monthlySavings: 0,
         yearlySavings: 0,
-        script: `Your rent of ${formatWon(quote.monthlyRent)} is at or below the market expectation of ${formatWon(expectedRent)}. This is already a good deal!`,
+        script: `I'd like to proceed with the ${formatWon(quote.deposit)} deposit and ${formatWon(quote.monthlyRent)} monthly rent. Could we sign a 2-year lease to lock in this rate? I'm a reliable tenant looking for long-term stability.`,
         recommended: true
-      }];
+      });
+
+      // Option 2: Negotiate non-price terms
+      options.push({
+        name: 'Negotiate Terms',
+        rate: marketRate,
+        deposit: quote.deposit,
+        monthlyRent: quote.monthlyRent,
+        monthlySavings: 0,
+        yearlySavings: 0,
+        script: `I'm happy with the rent terms. Before signing, I'd like to discuss: (1) Could you handle any minor repairs before move-in? (2) Is the deposit payable in 2 installments? (3) Could we include the washing machine/AC in the contract?`
+      });
+
+      // Option 3: Request move-in benefits
+      options.push({
+        name: 'Move-in Benefits',
+        rate: marketRate,
+        deposit: quote.deposit,
+        monthlyRent: quote.monthlyRent,
+        monthlySavings: 0,
+        yearlySavings: 0,
+        script: `The rent works for me. I'm ready to sign quickly. In exchange, would you consider: a few days of free rent for move-in preparation, or covering the first month's utility setup fees?`
+      });
+
+      return options;
     }
 
     // Option A: Market Rate (negotiate down to expected rent)
