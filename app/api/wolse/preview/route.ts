@@ -108,6 +108,8 @@ export async function POST(request: NextRequest) {
     console.log('\n✅ Wolse Preview Complete (NOT saved to DB)');
     console.log(`   Assessment: ${result.assessment}`);
     console.log(`   Expected Rent: ${(result.expectedRent / 10000).toLocaleString()}만원`);
+    console.log(`   Market Rate: ${result.marketRate.toFixed(2)}%`);
+    console.log(`   IQR Applied: ${result.outliersRemoved} outliers removed from ${result.contractCount} transactions → ${result.cleanTransactionCount} clean`);
 
     // Return result with input data for later saving
     return NextResponse.json({
