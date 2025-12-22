@@ -40,6 +40,9 @@ export default function WolseAnalyzePage() {
       setPreviewResult(responseData.result);
       setInputData(responseData.inputData);
       setViewState('preview');
+
+      // Scroll to top to show results
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -80,6 +83,9 @@ export default function WolseAnalyzePage() {
       setFullResult(data.result);
       setViewState('full');
       setShowPaymentModal(false);
+
+      // Scroll to top to show results
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to unlock');
     } finally {
@@ -115,6 +121,9 @@ export default function WolseAnalyzePage() {
       setFullResult(data.result);
       setViewState('full');
       setShowPaymentModal(false);
+
+      // Scroll to top to show results
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
