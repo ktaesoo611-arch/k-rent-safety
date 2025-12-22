@@ -253,7 +253,7 @@ export default function LandingPageV4() {
                 "Safety score (0-100)",
                 "PDF report in English"
               ]}
-              price="29,000"
+              price="14,900"
               betaPrice="FREE"
               href="/analyze"
               color="amber"
