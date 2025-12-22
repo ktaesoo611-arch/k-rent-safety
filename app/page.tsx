@@ -552,13 +552,23 @@ export default function LandingPageV4() {
               </div>
             </div>
 
-            {/* Contact */}
+            {/* Legal */}
             <div>
-              <div className="text-white/40 text-sm uppercase tracking-wider mb-4">Contact</div>
-              <div className="space-y-3 text-white/70">
-                <p>contact@jeonse-safety.com</p>
-                <p>010-2382-8432</p>
+              <div className="text-white/40 text-sm uppercase tracking-wider mb-4">Legal</div>
+              <div className="space-y-3">
+                <Link href="/terms" className="block text-white/70 hover:text-white transition-colors">Terms of Service</Link>
+                <Link href="/terms#refund-policy" className="block text-white/70 hover:text-white transition-colors">Refund Policy</Link>
+                <Link href="/terms#disclaimer" className="block text-white/70 hover:text-white transition-colors">Disclaimer</Link>
               </div>
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <div className="pb-8 border-b border-white/10 mb-8">
+            <div className="text-white/40 text-sm uppercase tracking-wider mb-4">Contact</div>
+            <div className="flex flex-wrap gap-6 text-white/70">
+              <p>contact@jeonse-safety.com</p>
+              <p>010-2382-8432</p>
             </div>
           </div>
 
