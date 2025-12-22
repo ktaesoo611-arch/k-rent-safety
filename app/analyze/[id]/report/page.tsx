@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import Tooltip from '@/components/Tooltip';
 import Link from 'next/link';
 
@@ -105,10 +103,10 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">Loading report...</p>
+          <div className="animate-spin w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-[#4A5568] text-lg">Loading report...</p>
         </div>
       </div>
     );
@@ -116,16 +114,20 @@ export default function ReportPage() {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen bg-gray-50 py-16">
+      <div className="min-h-screen bg-[#FDFBF7] py-16">
         <div className="container mx-auto px-6 max-w-2xl">
-          <Card className="text-center py-16">
-            <div className="text-6xl mb-6">❌</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Error occurred</h2>
-            <p className="text-gray-600 mb-8 text-lg">{error || 'Report not found'}</p>
-            <Link href="/">
-              <Button size="lg">Back to home</Button>
+          <div className="bg-white rounded-3xl shadow-xl shadow-amber-900/5 border border-amber-100 text-center py-16 px-8">
+            <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-2xl flex items-center justify-center">
+              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-[#1A202C] mb-3">Error occurred</h2>
+            <p className="text-[#4A5568] mb-8 text-lg">{error || 'Report not found'}</p>
+            <Link href="/" className="inline-block px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-amber-200/50 transition-all">
+              Back to home
             </Link>
-          </Card>
+          </div>
         </div>
       </div>
     );
@@ -162,23 +164,33 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[#FDFBF7] print:bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="bg-[#FDFBF7]/80 backdrop-blur-md border-b border-amber-100 sticky top-0 z-50 print:static print:bg-white print:border-gray-200">
         <div className="container mx-auto px-6 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-gray-900 tracking-tight hover:text-emerald-700 transition-colors">
-              Jeonse Safety Check
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200 group-hover:scale-105 transition-transform print:shadow-none">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <span className="text-xl font-semibold text-[#2D3748]">K-Rent Safety</span>
             </Link>
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => window.print()} size="sm">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex gap-3 print:hidden">
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-white border border-amber-200 text-[#4A5568] rounded-xl hover:bg-amber-50 transition-colors flex items-center gap-2 font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
                 Print
-              </Button>
+              </button>
               <Link href="/">
-                <Button size="sm">New analysis</Button>
+                <button className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-amber-200/50 transition-all font-medium">
+                  New analysis
+                </button>
               </Link>
             </div>
           </div>
@@ -188,10 +200,13 @@ export default function ReportPage() {
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Page Header */}
         <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 tracking-tight" style={{ letterSpacing: '-0.03em' }}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-full text-sm font-semibold mb-4 border border-amber-200 print:bg-amber-100">
+            <span>Analysis Complete</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-[#1A202C] mb-3 tracking-tight" style={{ letterSpacing: '-0.03em' }}>
             Safety Analysis Report
           </h1>
-          <p className="text-xl text-gray-600">{report.property.address}</p>
+          <p className="text-xl text-[#4A5568]">{report.property.address}</p>
         </div>
 
         {/* Overall Score - Hero Card */}
@@ -214,10 +229,10 @@ export default function ReportPage() {
         </div>
 
         {/* Property Info */}
-        <Card className="mb-8 shadow-lg border-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Property Information</h2>
+        <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200">
+          <h2 className="text-2xl font-bold text-[#1A202C] mb-6">Property Information</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="bg-gray-50 rounded-xl p-5">
+            <div className="bg-amber-50/50 rounded-xl p-5 border border-amber-100 print:bg-gray-50 print:border-gray-200">
               <p className="text-sm text-gray-600 mb-2 font-medium">Jeonse Deposit</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-gray-900">
@@ -226,7 +241,7 @@ export default function ReportPage() {
                 <span className="text-lg font-semibold text-gray-700">억</span>
               </div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-5">
+            <div className="bg-amber-50/50 rounded-xl p-5 border border-amber-100 print:bg-gray-50 print:border-gray-200">
               <div className="flex items-center gap-2 mb-2">
                 <p className="text-sm text-gray-600 font-medium">Est. Market Value</p>
                 <Tooltip content={
@@ -304,11 +319,11 @@ export default function ReportPage() {
                 <p className="text-2xl font-bold text-gray-900">N/A</p>
               )}
             </div>
-            <div className="bg-gray-50 rounded-xl p-5">
+            <div className="bg-amber-50/50 rounded-xl p-5 border border-amber-100 print:bg-gray-50 print:border-gray-200">
               <p className="text-sm text-gray-600 mb-2 font-medium">LTV Ratio</p>
               <p className="text-2xl font-bold text-gray-900">{report.riskAnalysis.metrics.ltv.toFixed(1)}%</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-5">
+            <div className="bg-amber-50/50 rounded-xl p-5 border border-amber-100 print:bg-gray-50 print:border-gray-200">
               <p className="text-sm text-gray-600 mb-2 font-medium">Total Debt</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-gray-900">
@@ -318,11 +333,11 @@ export default function ReportPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Component Scores */}
-        <Card className="mb-8 shadow-lg border-0 print:page-break-before">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Detailed Scores</h2>
+        <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200 print:page-break-before">
+          <h2 className="text-2xl font-bold text-[#1A202C] mb-6">Detailed Scores</h2>
           <div className="space-y-5">
             {Object.entries(report.riskAnalysis.scores).map(([key, value]) => {
               const labels: Record<string, string> = {
@@ -352,7 +367,7 @@ export default function ReportPage() {
                 marketScore: {
                   title: 'Market Conditions Analysis',
                   description: 'Assesses market trend with confidence-amplified impact. Higher confidence strengthens the trend signal (good news gets better, bad news gets worse). Lower confidence adds uncertainty penalty.',
-                  scoring: 'Base: 70pts | Rising Market: High confidence >80% (+25pts), Lower confidence (+15pts) | Falling Market: High confidence >80% (-35pts), Lower confidence (-25pts) | Stable: No trend adjustment | Additional: Low confidence <50% (-10pts uncertainty penalty)'
+                  scoring: 'Base: 70pts | Rising Market: High confidence ≥70% (+25pts), Medium 40-70% (+15pts), Low <40% (+8pts) | Falling Market: High confidence ≥70% (-35pts), Medium 40-70% (-25pts), Low <40% (-15pts) | Stable: No adjustment | Low confidence <40%: Additional -10pts uncertainty penalty'
                 },
                 buildingScore: {
                   title: 'Building Age Assessment',
@@ -402,13 +417,13 @@ export default function ReportPage() {
               );
             })}
           </div>
-        </Card>
+        </div>
 
         {/* Debt Breakdown */}
         {report.riskAnalysis.debtRanking && report.riskAnalysis.debtRanking.length > 0 && (
-          <Card className="mb-8 shadow-lg border-0">
+          <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200">
             <div className="flex items-center gap-3 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Debt & Collateral Analysis</h2>
+              <h2 className="text-2xl font-bold text-[#1A202C]">Debt & Collateral Analysis</h2>
               <Tooltip content={
                 <div>
                   <p className="font-bold text-gray-900 mb-2">Understanding Debt Priority</p>
@@ -604,13 +619,13 @@ export default function ReportPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Risks */}
         {report.riskAnalysis.risks.length > 0 && (
-          <Card className="mb-8 shadow-lg border-0">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200">
+            <h2 className="text-2xl font-bold text-[#1A202C] mb-6">
               Detected Risks ({report.riskAnalysis.risks.length})
             </h2>
             <div className="space-y-4">
@@ -642,13 +657,13 @@ export default function ReportPage() {
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Small Amount Priority */}
         {report.riskAnalysis.smallAmountPriority && (
-          <Card className="mb-8 shadow-lg border-0">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Small Amount Priority Repayment</h2>
+          <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200">
+            <h2 className="text-2xl font-bold text-[#1A202C] mb-6">Small Amount Priority Repayment</h2>
             <div className={`p-6 rounded-2xl border-2 ${
               report.riskAnalysis.smallAmountPriority.isEligible
                 ? 'bg-emerald-50 border-emerald-200'
@@ -672,12 +687,12 @@ export default function ReportPage() {
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Recommendations */}
-        <Card className="mb-8 shadow-lg border-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Recommendations</h2>
+        <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl shadow-amber-900/5 border border-amber-100 print:shadow-none print:border-gray-200">
+          <h2 className="text-2xl font-bold text-[#1A202C] mb-6">Recommendations</h2>
 
           {report.recommendations.mandatory.length > 0 && (
             <div className="mb-6">
@@ -726,30 +741,28 @@ export default function ReportPage() {
               </ul>
             </div>
           )}
-        </Card>
+        </div>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 print:hidden">
           <Link href="/" className="flex-1">
-            <Button size="lg" className="w-full text-lg">
+            <button className="w-full px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-lg rounded-2xl hover:shadow-xl hover:shadow-amber-200/50 transition-all hover:-translate-y-1">
               Start new analysis
-            </Button>
+            </button>
           </Link>
-          <Button
-            size="lg"
-            variant="secondary"
+          <button
             onClick={() => window.print()}
-            className="flex-1 text-lg"
+            className="flex-1 px-8 py-4 bg-white border-2 border-amber-200 text-[#4A5568] font-semibold text-lg rounded-2xl hover:bg-amber-50 transition-colors flex items-center justify-center gap-2"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
             Save as PDF
-          </Button>
+          </button>
         </div>
 
         {/* Disclaimer */}
-        <div className="bg-gray-100 rounded-2xl p-6 border border-gray-200">
+        <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200 print:bg-gray-100 print:border-gray-200">
           <p className="font-bold text-gray-900 mb-2">Disclaimer</p>
           <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
             <p>
@@ -778,9 +791,7 @@ export default function ReportPage() {
           }
 
           /* Hide elements that shouldn't print */
-          header,
-          .print\\:hidden,
-          button:not(.print\\:block) {
+          .print\\:hidden {
             display: none !important;
           }
 
@@ -792,6 +803,16 @@ export default function ReportPage() {
 
           body {
             background: white !important;
+          }
+
+          /* Reset warm background for print */
+          .bg-\\[\\#FDFBF7\\] {
+            background-color: white !important;
+          }
+
+          /* Show header logo but hide buttons */
+          header .flex.gap-3 {
+            display: none !important;
           }
 
           /* Page break control */

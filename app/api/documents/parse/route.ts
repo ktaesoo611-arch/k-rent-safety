@@ -22,6 +22,9 @@ import { RiskAnalyzer } from '@/lib/analyzers/risk-analyzer';
 import { MolitAPI, getDistrictCode } from '@/lib/apis/molit';
 import { parseFromTables } from '@/lib/analyzers/table-parser';
 import { LLMParser } from '@/lib/services/llm-parser';
+import { PropertyValuationEngine } from '@/lib/analyzers/property-valuation';
+import { PropertyDetails, ValuationResult } from '@/lib/types';
+import { analysisService } from '@/lib/services/analysis-service';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,110 +36,78 @@ interface ParseDocumentRequest {
 }
 
 /**
- * Fetch property valuation from MOLIT API
+ * Fetch property valuation using PropertyValuationEngine with linear regression
+ *
+ * Uses the updated methodology:
+ * - Linear regression for market trend detection
+ * - R-squared for statistical confidence
+ * - Multi-factor confidence calculation
+ * - 12 months of MOLIT data
  */
 async function fetchPropertyValuation(
   address: string,
   buildingName: string | undefined,
-  area: number
-): Promise<{ estimatedValue: number; confidence: number; marketTrend: 'rising' | 'stable' | 'falling' }> {
+  area: number,
+  floor?: number
+): Promise<ValuationResult | null> {
   try {
-    console.log('Fetching property valuation from MOLIT API...');
-    console.log('Address:', address);
-    console.log('Building:', buildingName);
-    console.log('Area:', area);
+    console.log('🏠 Fetching property valuation using PropertyValuationEngine...');
+    console.log('   Address:', address);
+    console.log('   Building:', buildingName);
+    console.log('   Area:', area);
 
-    // Parse address to extract city and district
-    const addressMatch = address.match(/(서울특별시|서울)\s+([가-힣]+구)/);
+    // Parse address to extract city, district, dong
+    const addressMatch = address.match(/(서울특별시|서울)\s+([가-힣]+구)\s*([가-힣0-9]+동)?/);
     if (!addressMatch) {
       console.warn('Could not parse city/district from address:', address);
-      return { estimatedValue: 0, confidence: 0, marketTrend: 'stable' };
+      return null;
     }
 
     const city = addressMatch[1] === '서울' ? '서울특별시' : addressMatch[1];
     const district = addressMatch[2];
+    const dong = addressMatch[3] || '';
 
-    console.log('Parsed location:', { city, district });
+    console.log('   Parsed location:', { city, district, dong });
 
-    // Get district code
-    const lawdCd = getDistrictCode(city, district);
-    if (!lawdCd) {
-      console.warn('Could not find district code for:', { city, district });
-      return { estimatedValue: 0, confidence: 0, marketTrend: 'stable' };
+    // Build PropertyDetails object
+    const propertyDetails: PropertyDetails = {
+      address,
+      city,
+      district,
+      dong,
+      buildingName: buildingName || '',
+      buildingNumber: '',
+      floor: floor || 5, // Default to mid-floor if not specified
+      unit: '',
+      exclusiveArea: area || 0
+    };
+
+    // Check if we have required fields
+    if (!propertyDetails.exclusiveArea || !propertyDetails.buildingName) {
+      console.warn('Missing required fields for valuation:', {
+        exclusiveArea: propertyDetails.exclusiveArea,
+        buildingName: propertyDetails.buildingName
+      });
+      return null;
     }
 
-    console.log('District code:', lawdCd);
+    // Initialize PropertyValuationEngine with MOLIT API key
+    const valuationEngine = new PropertyValuationEngine(process.env.MOLIT_API_KEY!);
 
-    // Initialize MOLIT API
-    const molitAPI = new MolitAPI(process.env.MOLIT_API_KEY!);
+    // Calculate property value using regression-based methodology
+    const valuation = await valuationEngine.calculatePropertyValue(propertyDetails);
 
-    // Try multiple building name variants to handle name mismatches
-    // Import the helper function
-    const { getBuildingNameVariants } = await import('@/lib/data/address-data');
-    const buildingNameVariants = buildingName ? getBuildingNameVariants(buildingName) : [''];
-    console.log('Trying building name variants:', buildingNameVariants);
-
-    let transactions: any[] = [];
-    let usedBuildingName = buildingName || '';
-
-    // Try each variant until we get transactions
-    for (const nameVariant of buildingNameVariants) {
-      console.log(`Trying variant: "${nameVariant}"`);
-      const result = await molitAPI.getRecentTransactionsForApartment(
-        lawdCd,
-        nameVariant,
-        area,
-        12 // Increased from 6 to 12 months for better coverage (handles trading gaps + fuzzy matching)
-      );
-
-      if (result.length > 0) {
-        transactions = result;
-        usedBuildingName = nameVariant;
-        console.log(`SUCCESS: Found ${transactions.length} transactions with variant: "${nameVariant}"`);
-        break;
-      } else {
-        console.log(`No transactions found for variant: "${nameVariant}"`);
-      }
-    }
-
-    console.log(`Found ${transactions.length} recent transactions using building name: "${usedBuildingName}"`);
-
-    if (transactions.length === 0) {
-      console.warn('No recent transactions found');
-      return { estimatedValue: 0, confidence: 0, marketTrend: 'stable' };
-    }
-
-    // Calculate average price from recent transactions
-    const avgPrice = transactions.reduce((sum, t) => sum + t.transactionAmount, 0) / transactions.length;
-
-    // Determine market trend
-    let marketTrend: 'rising' | 'stable' | 'falling' = 'stable';
-    if (transactions.length >= 3) {
-      const recentAvg = transactions.slice(0, 3).reduce((sum, t) => sum + t.transactionAmount, 0) / 3;
-      const olderAvg = transactions.slice(-3).reduce((sum, t) => sum + t.transactionAmount, 0) / 3;
-
-      if (recentAvg > olderAvg * 1.05) marketTrend = 'rising';
-      else if (recentAvg < olderAvg * 0.95) marketTrend = 'falling';
-    }
-
-    // Confidence based on number of transactions
-    const confidence = Math.min(0.9, 0.5 + (transactions.length * 0.05));
-
-    console.log('Valuation result:', {
-      estimatedValue: avgPrice,
-      confidence,
-      marketTrend,
-      transactionCount: transactions.length
+    console.log('✅ Valuation complete:', {
+      valueMid: valuation.valueMid,
+      confidence: `${(valuation.confidence * 100).toFixed(1)}%`,
+      trend: valuation.trend,
+      trendPercentage: `${valuation.trendPercentage.toFixed(1)}%`
     });
 
-    return {
-      estimatedValue: Math.round(avgPrice),
-      confidence,
-      marketTrend
-    };
+    return valuation;
   } catch (error) {
-    console.error('Error fetching MOLIT valuation:', error);
-    return { estimatedValue: 0, confidence: 0, marketTrend: 'stable' };
+    console.error('Error fetching property valuation:', error);
+    return null;
   }
 }
 
@@ -258,15 +229,14 @@ async function performRealAnalysis(
     let estimatedValue: number;
     let valuation: any;
 
-    if (molitValuation.estimatedValue > 0 && molitValuation.confidence > 0) {
-      console.log('Using MOLIT API valuation:', molitValuation.estimatedValue);
-      estimatedValue = molitValuation.estimatedValue;
+    if (molitValuation && molitValuation.valueMid > 0) {
+      console.log('Using MOLIT API valuation (PropertyValuationEngine):', molitValuation.valueMid);
+      console.log('   Confidence:', `${(molitValuation.confidence * 100).toFixed(1)}%`);
+      console.log('   Market trend:', molitValuation.trend, `(${molitValuation.trendPercentage.toFixed(1)}%)`);
+      estimatedValue = molitValuation.valueMid;
       valuation = {
-        valueLow: Math.round(estimatedValue * 0.95),
-        valueMid: estimatedValue,
-        valueHigh: Math.round(estimatedValue * 1.05),
-        confidence: molitValuation.confidence,
-        marketTrend: molitValuation.marketTrend
+        ...molitValuation,
+        marketTrend: molitValuation.trend // Keep for backward compatibility
       };
     } else {
       console.log('MOLIT data unavailable, using jeonse ratio estimation');
@@ -276,7 +246,12 @@ async function performRealAnalysis(
         valueMid: estimatedValue,
         valueHigh: Math.round(estimatedValue * 1.1),
         confidence: 0.5,
-        marketTrend: 'stable' as const
+        trend: 'stable' as const,
+        trendPercentage: 0,
+        marketTrend: 'stable' as const, // Keep for backward compatibility
+        recentSales: [],
+        pricePerPyeong: 0,
+        dataSources: []
       };
     }
 
@@ -442,9 +417,34 @@ async function performRealAnalysis(
       throw new Error('Failed to save analysis results: No rows updated');
     }
 
-    console.log('✅ Analysis results saved successfully');
+    console.log('✅ Analysis results saved to old schema successfully');
     console.log('   Updated rows:', updateResult.length);
     console.log('   Verification - deunggibu_data is:', updateResult[0].deunggibu_data ? 'present' : 'NULL');
+
+    // Also try to update new Option C schema (analyses + jeonse_safety_data)
+    try {
+      await analysisService.saveJeonseSafetyData(analysisId, {
+        proposedJeonse: proposedJeonse,
+        safetyScore: riskAnalysis.overallScore,
+        riskLevel: riskAnalysis.riskLevel,
+        deunggibuData: serializedDeunggibuData,
+        valuationData: valuation,
+        risks: riskAnalysis.risks,
+        recommendations: riskAnalysis.recommendations,
+        ltvRatio: riskAnalysis.ltv,
+        ltvScore: riskAnalysis.ltvScore,
+        debtScore: riskAnalysis.debtScore,
+        legalScore: riskAnalysis.legalScore,
+        marketScore: riskAnalysis.marketScore,
+        buildingScore: riskAnalysis.buildingScore
+      });
+
+      await analysisService.updateStatus(analysisId, 'completed', new Date().toISOString());
+      console.log(`✅ Also saved to new schema: jeonse_safety_data/${analysisId}`);
+    } catch (newSchemaError) {
+      // Not critical - old schema is the source of truth during migration
+      console.warn('Could not save to new schema (non-critical):', newSchemaError);
+    }
 
     return { success: true, ocrText, deunggibuData, riskAnalysis };
 
@@ -705,7 +705,36 @@ async function generateMockRiskAnalysis(
     console.error('❌ CRITICAL [MOCK]: Failed to save analysis results to database:', resultsError);
     throw new Error(`Failed to save mock analysis results: ${resultsError.message}`);
   } else {
-    console.log('✅ [MOCK] Analysis results saved successfully');
+    console.log('✅ [MOCK] Analysis results saved to old schema successfully');
+  }
+
+  // Also try to update new Option C schema (analyses + jeonse_safety_data)
+  try {
+    await analysisService.saveJeonseSafetyData(analysisId, {
+      proposedJeonse: proposedJeonse,
+      safetyScore: overallScore,
+      riskLevel: riskLevel,
+      deunggibuData: null, // Mock doesn't have real data
+      valuationData: {
+        valueLow: Math.round(estimatedValue * 0.9),
+        valueMid: estimatedValue,
+        valueHigh: Math.round(estimatedValue * 1.1)
+      },
+      risks: risks,
+      recommendations: { mandatory, recommended, optional },
+      ltvRatio: ltv,
+      ltvScore: ltvScore,
+      debtScore: debtScore,
+      legalScore: legalScore,
+      marketScore: marketScore,
+      buildingScore: buildingScore
+    });
+
+    await analysisService.updateStatus(analysisId, 'completed', new Date().toISOString());
+    console.log(`✅ [MOCK] Also saved to new schema: jeonse_safety_data/${analysisId}`);
+  } catch (newSchemaError) {
+    // Not critical - old schema is the source of truth during migration
+    console.warn('[MOCK] Could not save to new schema (non-critical):', newSchemaError);
   }
 
   return { success: true, mock: true };

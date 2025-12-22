@@ -258,3 +258,124 @@ export interface TossPaymentResponse {
     message: string;
   };
 }
+
+// ============ Wolse (Monthly Rent) Types ============
+
+export interface WolseTransaction {
+  apartmentName: string;
+  legalDong: string;
+  exclusiveArea: number;
+  floor: number;
+  deposit: number; // 보증금 (in won)
+  monthlyRent: number; // 월세 (in won)
+  year: number;
+  month: number;
+  day: number;
+  contractType?: string; // 신규, 갱신
+}
+
+export interface WolseMarketRate {
+  id?: string;
+  lawdCd: string;
+  apartmentName: string;
+  areaRangeMin: number;
+  areaRangeMax: number;
+  marketRate: number; // Annual conversion rate (%)
+  rate25thPercentile: number;
+  rate75thPercentile: number;
+  confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
+  contractCount: number;
+  trendDirection: 'RISING' | 'STABLE' | 'DECLINING';
+  trendPercentage: number;
+  calculatedAt: string;
+  expiresAt: string;
+}
+
+export interface LegalConversionRate {
+  effectiveDate: string;
+  bokBaseRate: number; // Bank of Korea base rate (%)
+  legalCap: number; // min(10%, BOK + 2%)
+}
+
+export interface WolseQuote {
+  deposit: number;
+  monthlyRent: number;
+}
+
+export interface WolseNegotiationOption {
+  name: string;
+  rate: number;
+  deposit: number;
+  monthlyRent: number;
+  monthlySavings: number;
+  yearlySavings: number;
+  script: string;
+  recommended?: boolean;
+}
+
+export interface WolseAnalysisResult {
+  id: string;
+  propertyId: string;
+  userId?: string;
+
+  // User's quote
+  userDeposit: number;
+  userMonthlyRent: number;
+  userImpliedRate: number;
+
+  // Rent comparison (NEW - regression-based methodology)
+  expectedRent: number;           // Expected rent at user's deposit based on market rate
+  rentDifference: number;         // actualRent - expectedRent (positive = overpaying)
+  rentDifferencePercent: number;  // Percentage difference
+
+  // Market analysis
+  marketRate: number;
+  marketRateRange: {
+    low: number; // 25th percentile
+    high: number; // 75th percentile
+  };
+  legalRate: number;
+  confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
+  contractCount: number;
+  cleanTransactionCount?: number;  // Transactions after outlier removal
+  outliersRemoved?: number;        // Number of outliers removed
+
+  // Assessment
+  assessment: 'GOOD_DEAL' | 'FAIR' | 'OVERPRICED' | 'SEVERELY_OVERPRICED';
+  assessmentDetails: string;
+
+  // Savings calculation
+  savingsPotential: {
+    vsMarket: number;
+    vsLegal: number;
+  };
+
+  // Trend
+  trend: {
+    direction: 'RISING' | 'STABLE' | 'DECLINING';
+    percentage: number;
+    advice: string;
+  };
+
+  // Recommendations
+  negotiationOptions: WolseNegotiationOption[];
+
+  // Reference transactions
+  recentTransactions: WolseTransaction[];
+
+  // Metadata
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface WolseAnalysisRequest {
+  propertyDetails: {
+    city: string;
+    district: string;
+    dong: string;
+    apartmentName: string;
+    exclusiveArea: number;
+  };
+  quote: WolseQuote;
+  userId?: string;
+}

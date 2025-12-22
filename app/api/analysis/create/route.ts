@@ -136,7 +136,12 @@ export async function POST(request: NextRequest) {
       propertyId = newProperty.id;
     }
 
-    // Create analysis record (linked to authenticated user)
+    // Use old schema (analysis_results) as primary - all existing APIs depend on it
+    let analysisId: string;
+    let analysisStatus: string = 'pending';
+    let analysisCreatedAt: string = new Date().toISOString();
+
+    // Create analysis in old schema (analysis_results) - this is what all APIs expect
     const { data: analysis, error: analysisError } = await supabase
       .from('analysis_results')
       .insert([
@@ -159,13 +164,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    analysisId = analysis.id;
+    analysisStatus = analysis.status;
+    analysisCreatedAt = analysis.created_at;
+    console.log(`✅ Created analysis in analysis_results: ${analysisId}`);
+
     // Return success response
     return NextResponse.json(
       {
-        analysisId: analysis.id,
+        analysisId: analysisId,
         propertyId: propertyId,
-        status: analysis.status,
-        createdAt: analysis.created_at,
+        status: analysisStatus,
+        createdAt: analysisCreatedAt,
         message: 'Analysis created successfully',
       },
       { status: 201 }

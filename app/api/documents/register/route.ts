@@ -50,14 +50,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify analysis exists
-    const { data: analysis, error: analysisError } = await supabase
-      .from('analysis_results')
+    // Verify analysis exists (check both new and old schema)
+    let analysisFound = false;
+    let useNewSchema = false;
+
+    // Try new schema first (analyses table)
+    const { data: newAnalysis } = await supabase
+      .from('analyses')
       .select('id')
       .eq('id', analysisId)
       .single();
 
-    if (analysisError || !analysis) {
+    if (newAnalysis) {
+      analysisFound = true;
+      useNewSchema = true;
+    } else {
+      // Fall back to old schema (analysis_results table)
+      const { data: oldAnalysis } = await supabase
+        .from('analysis_results')
+        .select('id')
+        .eq('id', analysisId)
+        .single();
+
+      if (oldAnalysis) {
+        analysisFound = true;
+      }
+    }
+
+    if (!analysisFound) {
       return NextResponse.json(
         { error: 'Analysis not found' },
         { status: 404 }
@@ -102,11 +122,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Update analysis status to 'processing' if not already
-    await supabase
-      .from('analysis_results')
-      .update({ status: 'processing' })
-      .eq('id', analysisId)
-      .eq('status', 'pending'); // Only update if still pending
+    if (useNewSchema) {
+      await supabase
+        .from('analyses')
+        .update({ status: 'processing' })
+        .eq('id', analysisId)
+        .eq('status', 'pending'); // Only update if still pending
+    } else {
+      await supabase
+        .from('analysis_results')
+        .update({ status: 'processing' })
+        .eq('id', analysisId)
+        .eq('status', 'pending'); // Only update if still pending
+    }
 
     // Return success response
     return NextResponse.json(

@@ -16,7 +16,7 @@ export default function TermsPage() {
             Terms of Service & Refund Policy
           </h1>
           <p className="text-lg text-gray-600 mb-12">
-            Jeonse Safety Checker | 서비스 이용약관 및 환불정책
+            K-Rent Safety | 서비스 이용약관 및 환불정책
           </p>
 
           {/* Table of Contents */}
@@ -39,7 +39,7 @@ export default function TermsPage() {
             </h2>
             <div className="prose prose-gray max-w-none">
               <p className="text-gray-700 leading-relaxed mb-4">
-                Jeonse Safety Checker provides digital property analysis reports for Korean real estate, specifically designed for foreigners. Our service includes:
+                K-Rent Safety provides digital property analysis reports for Korean real estate, specifically designed for foreigners. Our service includes:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
                 <li>English translation of Korean property registers (등기부등본)</li>

@@ -48,6 +48,20 @@ interface ParsedDeunggibuData {
   parsingMethod: 'llm';
   confidence: number;
   buildingYear?: number; // Optional: extracted from 표제부
+
+  // Property info from 표제부
+  area?: number; // 전용면적 in ㎡
+
+  // Liens & Restrictions flags (for legal score calculation)
+  hasSeizure: boolean; // 압류
+  hasAuction: boolean; // 경매개시결정
+  hasProvisionalSeizure: boolean; // 가압류
+  hasSuperficies: boolean; // 지상권
+  hasProvisionalRegistration: boolean; // 가등기
+  hasProvisionalDisposition: boolean; // 가처분
+  hasEasement: boolean; // 지역권
+  hasAdvanceNotice: boolean; // 예고등기
+  hasUnregisteredLandRights: boolean; // 대지권미등기
 }
 
 export class LLMParser {
@@ -96,11 +110,17 @@ export class LLMParser {
 
       const parsed = JSON.parse(jsonMatch[0]);
 
-      // Log building year extraction for debugging
+      // Log extraction for debugging
       if (parsed.buildingYear) {
         console.log(`   ✅ Building year extracted: ${parsed.buildingYear}`);
       } else {
         console.log(`   ⚠️  Building year not found in LLM response`);
+      }
+
+      if (parsed.area) {
+        console.log(`   ✅ Exclusive area extracted: ${parsed.area}㎡`);
+      } else {
+        console.log(`   ⚠️  Exclusive area not found in LLM response`);
       }
 
       // Transform to expected format
@@ -110,7 +130,26 @@ export class LLMParser {
       console.log(`   - Mortgages: ${result.mortgages.length}`);
       console.log(`   - Jeonse rights: ${result.jeonseRights.length}`);
       console.log(`   - Liens: ${result.liens.length}`);
+      console.log(`   - Area: ${result.area ? `${result.area}㎡` : 'not found'}`);
       console.log(`   - Confidence: ${(result.confidence * 100).toFixed(1)}%`);
+
+      // Log legal restriction flags
+      const legalFlags = [];
+      if (result.hasSeizure) legalFlags.push('압류');
+      if (result.hasAuction) legalFlags.push('경매');
+      if (result.hasProvisionalSeizure) legalFlags.push('가압류');
+      if (result.hasSuperficies) legalFlags.push('지상권');
+      if (result.hasProvisionalRegistration) legalFlags.push('가등기');
+      if (result.hasProvisionalDisposition) legalFlags.push('가처분');
+      if (result.hasEasement) legalFlags.push('지역권');
+      if (result.hasAdvanceNotice) legalFlags.push('예고등기');
+      if (result.hasUnregisteredLandRights) legalFlags.push('대지권미등기');
+
+      if (legalFlags.length > 0) {
+        console.log(`   ⚠️  Legal restrictions detected: ${legalFlags.join(', ')}`);
+      } else {
+        console.log(`   ✅ No legal restrictions detected`);
+      }
 
       return result;
     } catch (error) {
@@ -131,17 +170,26 @@ export class LLMParser {
 **EXTRACTION METHODOLOGY - FOLLOW THIS PRIORITY:**
 
 PRIORITY 1: Extract from "주요 등기사항 요약 (참고용)" summary section FIRST
-  - This section lists ONLY ACTIVE entries (cancelled items are automatically excluded)
+  - This section is usually at the END of the document
+  - This section lists ONLY ACTIVE entries (cancelled/말소 items are automatically excluded)
   - Look for these subsections within the summary:
-    * "1. 소유권에 관한 사항 ( 갑구 )" - Current ownership info (CRITICAL for 공동소유 detection)
-    * "3. (근)저당권 및 전세권 등 ( 을구 )" - Active mortgages, jeonse rights, and liens
+    * "1. 소유지분현황 ( 갑구 )" or "1. 소유권에 관한 사항 ( 갑구 )" - Current ownership
+    * "2. 소유지분을 제외한 소유권에 관한 사항 (갑구)" - Active liens, seizures, auctions (CRITICAL for legal flags!)
+    * "3. (근)저당권 및 전세권 등 ( 을구 )" - Active mortgages, jeonse rights
   - This is the MOST RELIABLE source - prioritize data from here!
+  - If section shows "기록사항 없음" (No Records), that means NO active entries exist
 
 PRIORITY 2: If summary section is missing or incomplete, fall back to detailed sections:
   - Section "갑구" or "【갑구】" - detailed ownership section
   - Section "을구" or "【을구】" - detailed mortgage/jeonse section
 
-PRIORITY 3: Extract building year from "표제부" or "【표제부】" (title section)
+PRIORITY 3: Extract from "표제부" or "【표제부】" (title section):
+  - Building year (건축년도)
+  - Exclusive area (전용면적) - CRITICAL for MOLIT API matching
+
+PRIORITY 4: Detect legal restrictions from ALL sections (갑구, 을구, summary):
+  - These are boolean flags indicating presence of specific legal issues
+  - Check BOTH the summary section AND detailed sections
 
 **CRITICAL**: Do NOT skip ANY entries. Extract ALL ownership, liens, mortgages, and jeonse rights!
 
@@ -183,7 +231,31 @@ PRIORITY 3: Extract building year from "표제부" or "【표제부】" (title s
    - Extract 4-digit year (e.g., "2021년", "2021-", "2021.")
    - **EXAMPLE**: "신축년월일 2021년03월15일" → buildingYear: 2021
 
-6. **Handle OCR corruption**:
+6. **전용면적 (Exclusive Area)** - CRITICAL for MOLIT API:
+   - Look in "표제부" section, specifically "전유부분의 건물의 표시"
+   - Find area in ㎡ or m² format (e.g., "84.98㎡", "114.86m²")
+   - Usually appears after "건물번호" or near structure description
+   - **EXAMPLE**: "제8층 제804호 철근콘크리트구조 114.86m²" → area: 114.86
+
+7. **Legal Restrictions (Boolean Flags)** - CRITICAL for risk scoring:
+   **IMPORTANT**: Use ONLY the "주요 등기사항 요약 (참고용)" summary section to detect these!
+   - The summary section lists ONLY ACTIVE entries (cancelled/말소 items are automatically excluded)
+   - Do NOT look at the detailed 갑구/을구 sections for these flags - they contain historical cancelled entries
+   - If an item appears in the summary section, set the flag to true
+   - If an item does NOT appear in the summary section, set the flag to false
+
+   Flags to detect from summary section:
+   - **hasSeizure (압류)**: Court seizure - look for "압류" but NOT "가압류" in section 2
+   - **hasAuction (경매개시결정)**: Foreclosure auction - look for "경매개시결정" or "임의경매개시결정" in section 2
+   - **hasProvisionalSeizure (가압류)**: Provisional seizure - look for "가압류" in section 2
+   - **hasSuperficies (지상권)**: Surface rights - look for "지상권" in section 3
+   - **hasProvisionalRegistration (가등기)**: Provisional registration - look for "가등기" in section 2
+   - **hasProvisionalDisposition (가처분)**: Provisional disposition - look for "가처분" in section 2
+   - **hasEasement (지역권)**: Easement rights - look for "지역권" in section 3
+   - **hasAdvanceNotice (예고등기)**: Advance notice - look for "예고등기" in section 2
+   - **hasUnregisteredLandRights (대지권미등기)**: Unregistered land rights - look for "대지권미등기" in 표제부 or summary
+
+8. **Handle OCR corruption**:
    - Entries may be merged on same line (e.g., "8 전세권변경 25 근저당권설정 2022년2월9일")
    - Use delimiters like "|" or "제XXX호" to separate fields
    - If date appears multiple times, match it to the closest entry type
@@ -194,6 +266,7 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 
 {
   "buildingYear": 2021,
+  "area": 84.98,
   "ownership": [
     {
       "ownerName": "홍길동",
@@ -248,7 +321,16 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
       "claimant": "박민수",
       "confidence": 0.90
     }
-  ]
+  ],
+  "hasSeizure": false,
+  "hasAuction": false,
+  "hasProvisionalSeizure": true,
+  "hasSuperficies": false,
+  "hasProvisionalRegistration": false,
+  "hasProvisionalDisposition": true,
+  "hasEasement": false,
+  "hasAdvanceNotice": false,
+  "hasUnregisteredLandRights": false
 }
 
 **OCR Text to parse:**
@@ -262,6 +344,9 @@ ${text}`;
   private transformToDeunggibuData(parsed: any): ParsedDeunggibuData {
     // Extract building year (optional, may not be found in OCR)
     const buildingYear = parsed.buildingYear ? parseInt(parsed.buildingYear.toString(), 10) : undefined;
+
+    // Extract area (전용면적) - CRITICAL for MOLIT API
+    const area = parsed.area ? parseFloat(parsed.area.toString()) : undefined;
 
     // Transform mortgages
     const mortgages: MortgageEntry[] = (parsed.mortgages || []).map((m: any) => ({
@@ -313,6 +398,17 @@ ${text}`;
       ? allConfidences.reduce((sum, c) => sum + c, 0) / allConfidences.length
       : 0.95;
 
+    // Extract legal restriction flags (default to false if not present)
+    const hasSeizure = parsed.hasSeizure === true;
+    const hasAuction = parsed.hasAuction === true;
+    const hasProvisionalSeizure = parsed.hasProvisionalSeizure === true;
+    const hasSuperficies = parsed.hasSuperficies === true;
+    const hasProvisionalRegistration = parsed.hasProvisionalRegistration === true;
+    const hasProvisionalDisposition = parsed.hasProvisionalDisposition === true;
+    const hasEasement = parsed.hasEasement === true;
+    const hasAdvanceNotice = parsed.hasAdvanceNotice === true;
+    const hasUnregisteredLandRights = parsed.hasUnregisteredLandRights === true;
+
     return {
       mortgages,
       jeonseRights,
@@ -323,6 +419,18 @@ ${text}`;
       parsingMethod: 'llm',
       confidence,
       buildingYear, // Optional: extracted from 표제부 section
+      area, // 전용면적 from 표제부 section
+
+      // Legal restriction flags
+      hasSeizure,
+      hasAuction,
+      hasProvisionalSeizure,
+      hasSuperficies,
+      hasProvisionalRegistration,
+      hasProvisionalDisposition,
+      hasEasement,
+      hasAdvanceNotice,
+      hasUnregisteredLandRights,
     };
   }
 }

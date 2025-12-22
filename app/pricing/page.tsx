@@ -1,62 +1,114 @@
 'use client';
 
 import Link from 'next/link';
-import Header from '@/components/Header';
-import { Button } from '@/components/ui/Button';
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="fixed top-0 w-full z-50">
-        <Header />
+    <div className="min-h-screen bg-[#FDFBF7] text-[#2D3748] selection:bg-amber-200 selection:text-amber-900">
+      {/* Warm gradient background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FEF7ED] via-[#FDFBF7] to-[#F5F0E8]" />
+        <div className="absolute top-20 left-[10%] w-64 h-64 bg-amber-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-[40%] right-[5%] w-48 h-48 bg-orange-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-[20%] left-[20%] w-56 h-56 bg-yellow-200/15 rounded-full blur-3xl" />
       </div>
 
-      <div className="pt-32 pb-24 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-6 max-w-6xl">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-[#FDFBF7]/80 backdrop-blur-md border-b border-amber-100">
+        {/* Animated gradient line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400" style={{ backgroundSize: '200% 100%', animation: 'gradient-x 3s ease infinite' }} />
+
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
+              <div className="relative w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200 group-hover:scale-105 group-hover:rotate-3 transition-all">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 bg-clip-text text-transparent">K-Rent Safety</span>
+              <span className="text-[10px] text-amber-600/60 font-medium tracking-wider uppercase hidden sm:block">Trusted Rental Analysis</span>
+            </div>
+          </Link>
+          <div className="flex items-center gap-2">
+            {/* Service Links */}
+            <Link href="/analyze" className="group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+              <span className="relative text-[#4A5568] group-hover:text-white flex items-center gap-2 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Jeonse Safety
+              </span>
+            </Link>
+
+            <Link href="/analyze/wolse" className="group relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+              <span className="relative text-[#4A5568] group-hover:text-white flex items-center gap-2 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Wolse Price
+                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded group-hover:bg-white/20 group-hover:text-white transition-colors">FREE</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="relative z-10 pt-32 pb-24">
+        <div className="max-w-6xl mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-16">
-            <div className="inline-block mb-4 px-5 py-2 bg-emerald-100 rounded-full">
-              <span className="text-emerald-700 text-sm font-semibold">PRICING</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight" style={{ letterSpacing: '-0.03em' }}>
+            <span className="text-amber-600 text-sm font-semibold tracking-wider uppercase">PRICING</span>
+            <h1 className="mt-4 text-4xl md:text-6xl font-bold text-[#1A202C] tracking-tight" style={{ letterSpacing: '-0.03em' }}>
               Transparent Pricing
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Professional jeonse safety analysis at an affordable price.
+            <p className="mt-6 text-xl text-[#4A5568] max-w-2xl mx-auto">
+              Professional rental analysis services at affordable prices.
               <br />
               Currently FREE during beta period.
             </p>
           </div>
 
           {/* Beta Announcement */}
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-8 mb-12 text-center shadow-xl shadow-emerald-900/20">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-8 mb-12 text-center shadow-xl shadow-amber-200/30">
             <div className="text-white">
               <div className="text-5xl mb-4">🎉</div>
               <h2 className="text-3xl font-bold mb-3">Beta Launch Special</h2>
-              <p className="text-xl text-emerald-50 mb-4">
+              <p className="text-xl text-amber-50 mb-4">
                 All services are completely FREE during our beta testing period!
               </p>
-              <p className="text-emerald-100 text-sm">
+              <p className="text-amber-100 text-sm">
                 베타 테스트 기간 동안 모든 서비스를 무료로 이용하실 수 있습니다.
               </p>
             </div>
           </div>
 
+          {/* Service Categories */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-[#1A202C] text-center mb-2">Our Services</h2>
+            <p className="text-[#4A5568] text-center">Two powerful tools to protect your rental investment</p>
+          </div>
+
           {/* Product/Service Offerings */}
           <div className="grid md:grid-cols-2 gap-8 mb-16">
-            {/* Free Beta Plan */}
-            <div className="bg-white rounded-2xl border-2 border-emerald-500 shadow-xl shadow-emerald-900/10 overflow-hidden transform hover:scale-105 transition-transform">
-              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white">
+            {/* Jeonse Safety Check */}
+            <div className="bg-white rounded-3xl border-2 border-amber-200 shadow-xl shadow-amber-100/50 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+              <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-2xl font-bold">Beta Free Trial</h3>
+                  <h3 className="text-2xl font-bold">Jeonse Safety Check</h3>
                   <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
-                    LIMITED TIME
+                    FREE BETA
                   </span>
                 </div>
-                <p className="text-emerald-50 mb-4">Full access to all features</p>
+                <p className="text-amber-50 mb-4">Comprehensive deposit safety analysis</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-bold">₩0</span>
-                  <span className="text-emerald-100 line-through">₩29,000</span>
+                  <span className="text-amber-100 line-through">₩29,000</span>
                 </div>
               </div>
 
@@ -73,54 +125,59 @@ export default function PricingPage() {
                 </ul>
 
                 <Link href="/analyze">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-lg py-6 rounded-xl font-semibold shadow-lg shadow-emerald-600/30">
-                    Start Free Analysis →
-                  </Button>
+                  <button className="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-2xl hover:shadow-xl hover:shadow-amber-200/50 transition-all group-hover:-translate-y-1 flex items-center justify-center gap-2">
+                    Start Jeonse Analysis
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
                 </Link>
               </div>
             </div>
 
-            {/* Standard Plan (Coming Soon) */}
-            <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-lg overflow-hidden opacity-90">
-              <div className="bg-gradient-to-br from-gray-700 to-gray-900 p-6 text-white">
+            {/* Wolse Price Check */}
+            <div className="bg-white rounded-3xl border-2 border-amber-200 shadow-xl shadow-amber-100/50 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
+              <div className="bg-gradient-to-br from-orange-400 to-amber-600 p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-2xl font-bold">Standard Plan</h3>
+                  <h3 className="text-2xl font-bold">Wolse Price Check</h3>
                   <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
-                    COMING SOON
+                    FREE BETA
                   </span>
                 </div>
-                <p className="text-gray-200 mb-4">After beta period</p>
+                <p className="text-orange-50 mb-4">Verify if your monthly rent is fair</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold">₩29,000</span>
-                  <span className="text-gray-300 text-sm">per report</span>
+                  <span className="text-5xl font-bold">₩0</span>
+                  <span className="text-orange-100 line-through">₩9,900</span>
                 </div>
               </div>
 
               <div className="p-8">
                 <ul className="space-y-4 mb-8">
-                  <FeatureItem text="English translation of property register" />
-                  <FeatureItem text="20+ comprehensive risk checks" />
-                  <FeatureItem text="AI-powered property valuation" />
-                  <FeatureItem text="Safety score (0-100)" />
-                  <FeatureItem text="Detailed PDF report" />
-                  <FeatureItem text="Legal risk analysis" />
-                  <FeatureItem text="Actionable recommendations" />
-                  <FeatureItem text="Priority email support" />
+                  <FeatureItem text="Market rate analysis from MOLIT data" />
+                  <FeatureItem text="Legal rate compliance check" />
+                  <FeatureItem text="Fair price assessment" />
+                  <FeatureItem text="Savings calculation" />
+                  <FeatureItem text="Ready-to-use negotiation scripts" />
+                  <FeatureItem text="Instant results" />
+                  <FeatureItem text="No document upload needed" />
+                  <FeatureItem text="Unlimited checks during beta" />
                 </ul>
 
-                <Button
-                  disabled
-                  className="w-full bg-gray-300 text-gray-500 text-lg py-6 rounded-xl font-semibold cursor-not-allowed"
-                >
-                  Available After Beta
-                </Button>
+                <Link href="/analyze/wolse">
+                  <button className="w-full px-6 py-4 bg-gradient-to-r from-orange-400 to-amber-600 text-white font-semibold rounded-2xl hover:shadow-xl hover:shadow-amber-200/50 transition-all group-hover:-translate-y-1 flex items-center justify-center gap-2">
+                    Start Wolse Analysis
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </Link>
               </div>
             </div>
           </div>
 
           {/* What's Included Section */}
-          <div className="bg-gray-50 rounded-2xl p-8 md:p-12 mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+          <div className="bg-white rounded-3xl p-8 md:p-12 mb-16 border border-amber-100">
+            <h2 className="text-3xl font-bold text-[#1A202C] mb-8 text-center">
               What's Included in Every Report
             </h2>
 
@@ -175,7 +232,7 @@ export default function PricingPage() {
 
           {/* FAQ Section */}
           <div className="mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            <h2 className="text-3xl font-bold text-[#1A202C] mb-8 text-center">
               Frequently Asked Questions
             </h2>
 
@@ -204,30 +261,51 @@ export default function PricingPage() {
           </div>
 
           {/* CTA Section */}
-          <div className="bg-gradient-to-br from-emerald-900 via-teal-900 to-emerald-950 rounded-2xl p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-emerald-100/5 to-transparent"></div>
+          <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-3xl p-12 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
             <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full mb-8">
+                <span className="text-white/90 text-sm font-medium">🎉 Free during beta</span>
+              </div>
+
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to check your jeonse safety?
+                Ready to protect your rental investment?
               </h2>
-              <p className="text-xl text-emerald-50 mb-8 max-w-2xl mx-auto">
-                Join hundreds of foreigners who have protected their deposits with our analysis.
+              <p className="text-xl text-amber-50 mb-10 max-w-2xl mx-auto">
+                Join hundreds of expats who have safely navigated the Korean rental market.
               </p>
-              <Link href="/analyze">
-                <Button
-                  size="lg"
-                  className="text-lg px-10 py-5 bg-white text-emerald-900 hover:bg-emerald-50 shadow-xl shadow-emerald-900/30 border-0 rounded-2xl font-semibold transition-all hover:scale-105"
-                >
-                  Start Free Analysis Now →
-                </Button>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/analyze">
+                  <button className="px-10 py-5 bg-white text-amber-600 font-bold text-lg rounded-2xl hover:shadow-2xl transition-all hover:-translate-y-1 flex items-center gap-3">
+                    Jeonse Safety Check
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </Link>
+                <Link href="/analyze/wolse">
+                  <button className="px-10 py-5 bg-white/20 text-white font-bold text-lg rounded-2xl hover:bg-white/30 transition-all hover:-translate-y-1 flex items-center gap-3 border border-white/30">
+                    Wolse Price Check
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </Link>
+              </div>
+
+              <p className="mt-6 text-white/60 text-sm">
+                No credit card required • Results in 2 minutes
+              </p>
             </div>
           </div>
 
           {/* Back to Home */}
           <div className="mt-12 text-center">
-            <Link href="/" className="text-emerald-600 hover:text-emerald-700 font-medium">
-              ← Back to Home
+            <Link href="/" className="text-amber-600 hover:text-amber-700 font-medium inline-flex items-center gap-2 group">
+              <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Home
             </Link>
           </div>
         </div>
@@ -240,34 +318,34 @@ export default function PricingPage() {
 function FeatureItem({ text }: { text: string }) {
   return (
     <li className="flex items-start gap-3">
-      <svg className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
-      <span className="text-gray-700">{text}</span>
+      <span className="text-[#4A5568]">{text}</span>
     </li>
   );
 }
 
 function IncludedItem({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-      <div className="text-4xl mb-3">{icon}</div>
-      <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 text-sm">{description}</p>
+    <div className="bg-amber-50/50 rounded-2xl p-6 border border-amber-100 hover:shadow-lg hover:shadow-amber-100/50 hover:-translate-y-1 transition-all duration-300 group">
+      <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">{icon}</div>
+      <h3 className="text-lg font-bold text-[#2D3748] mb-2">{title}</h3>
+      <p className="text-[#718096] text-sm">{description}</p>
     </div>
   );
 }
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
-    <details className="bg-white rounded-xl border border-gray-200 p-6 group">
-      <summary className="font-semibold text-gray-900 cursor-pointer list-none flex items-center justify-between">
+    <details className="bg-white rounded-2xl border border-amber-100 p-6 group hover:shadow-lg hover:shadow-amber-100/50 transition-all">
+      <summary className="font-semibold text-[#2D3748] cursor-pointer list-none flex items-center justify-between">
         {question}
-        <svg className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-amber-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </summary>
-      <p className="mt-4 text-gray-600 leading-relaxed">{answer}</p>
+      <p className="mt-4 text-[#4A5568] leading-relaxed">{answer}</p>
     </details>
   );
 }

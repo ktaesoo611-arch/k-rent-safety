@@ -17,6 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { analysisService } from '@/lib/services/analysis-service';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,7 +41,105 @@ export async function GET(
       );
     }
 
-    // Fetch analysis from database with property details
+    // Try new schema first (jeonse_safety_full view)
+    const newSchemaResult = await analysisService.getJeonseSafetyFull(analysisId);
+    if (newSchemaResult && newSchemaResult.status === 'completed' && newSchemaResult.deunggibu_data) {
+      // Fetch documents for additional context
+      const { data: documents } = await supabase
+        .from('uploaded_documents')
+        .select('*')
+        .eq('analysis_id', analysisId)
+        .order('created_at', { ascending: false });
+
+      const deunggibuDoc = documents?.find((d: any) => d.document_type === 'deunggibu');
+      const parsedData = deunggibuDoc?.parsed_data || null;
+
+      // Build report from new schema
+      const riskAnalysis = newSchemaResult.deunggibu_data;
+      const report = {
+        analysisId: newSchemaResult.id,
+        generatedAt: new Date().toISOString(),
+        completedAt: newSchemaResult.completed_at,
+
+        property: {
+          address: newSchemaResult.address || 'N/A',
+          buildingName: newSchemaResult.building_name || null,
+          proposedJeonse: newSchemaResult.proposed_jeonse,
+          estimatedValue: newSchemaResult.valuation_data?.valueMid || riskAnalysis.valuation?.valueMid || null,
+          area: riskAnalysis.deunggibu?.area || null,
+          buildingAge: parsedData?.property?.buildingAge || null,
+          propertyType: parsedData?.property?.type || null,
+          valuation: {
+            valueLow: newSchemaResult.valuation_data?.valueLow || riskAnalysis.valuation?.valueLow || null,
+            valueMid: newSchemaResult.valuation_data?.valueMid || riskAnalysis.valuation?.valueMid || null,
+            valueHigh: newSchemaResult.valuation_data?.valueHigh || riskAnalysis.valuation?.valueHigh || null,
+            confidence: newSchemaResult.valuation_data?.confidence || riskAnalysis.valuation?.confidence || null,
+            marketTrend: newSchemaResult.valuation_data?.marketTrend || riskAnalysis.valuation?.marketTrend || null,
+          },
+        },
+
+        owner: { name: null, phone: null },
+
+        riskAnalysis: {
+          overallScore: riskAnalysis.overallScore || newSchemaResult.safety_score,
+          riskLevel: riskAnalysis.riskLevel || newSchemaResult.risk_level,
+          verdict: riskAnalysis.verdict,
+          scores: {
+            ltvScore: newSchemaResult.ltv_score || riskAnalysis.scores?.ltvScore || 0,
+            debtScore: newSchemaResult.debt_score || riskAnalysis.scores?.debtScore || 0,
+            legalScore: newSchemaResult.legal_score || riskAnalysis.scores?.legalScore || 0,
+            marketScore: newSchemaResult.market_score || riskAnalysis.scores?.marketScore || 0,
+            buildingScore: newSchemaResult.building_score || riskAnalysis.scores?.buildingScore || 0,
+          },
+          metrics: {
+            ltv: newSchemaResult.ltv_ratio || riskAnalysis.ltv || 0,
+            totalDebt: riskAnalysis.totalDebt || riskAnalysis.breakdown?.totalDebt || 0,
+            availableEquity: riskAnalysis.availableEquity || riskAnalysis.breakdown?.availableEquity || 0,
+            debtCount: riskAnalysis.debtRanking?.length || 0,
+          },
+          risks: newSchemaResult.risks || riskAnalysis.risks || [],
+          debtRanking: riskAnalysis.debtRanking || [],
+          smallAmountPriority: riskAnalysis.smallAmountPriority || null,
+        },
+
+        recommendations: {
+          mandatory: newSchemaResult.recommendations?.mandatory || riskAnalysis.recommendations?.mandatory || [],
+          recommended: newSchemaResult.recommendations?.recommended || riskAnalysis.recommendations?.recommended || [],
+          optional: newSchemaResult.recommendations?.optional || riskAnalysis.recommendations?.optional || [],
+        },
+
+        summary: {
+          safetyScore: riskAnalysis.overallScore || newSchemaResult.safety_score,
+          riskLevel: riskAnalysis.riskLevel || newSchemaResult.risk_level,
+          isSafe: (riskAnalysis.riskLevel || newSchemaResult.risk_level) === 'SAFE',
+          isModerate: (riskAnalysis.riskLevel || newSchemaResult.risk_level) === 'MODERATE',
+          isHigh: (riskAnalysis.riskLevel || newSchemaResult.risk_level) === 'HIGH',
+          isCritical: (riskAnalysis.riskLevel || newSchemaResult.risk_level) === 'CRITICAL',
+          verdict: riskAnalysis.verdict,
+          criticalIssues: (newSchemaResult.risks || riskAnalysis.risks)?.filter((r: any) => r.severity === 'CRITICAL').length || 0,
+          highIssues: (newSchemaResult.risks || riskAnalysis.risks)?.filter((r: any) => r.severity === 'HIGH').length || 0,
+          moderateIssues: (newSchemaResult.risks || riskAnalysis.risks)?.filter((r: any) => r.severity === 'MODERATE').length || 0,
+        },
+
+        legalInfo: {
+          law: '주택임대차보호법 시행령',
+          effectiveDate: '2025. 3. 1.',
+          decree: '대통령령 제35161호, 2024. 12. 31., 일부개정',
+        },
+
+        documents: documents?.map((d: any) => ({
+          id: d.id,
+          type: d.document_type,
+          fileName: d.file_name,
+          uploadedAt: d.created_at,
+          parsed: !!d.parsed_data,
+        })) || [],
+      };
+
+      return NextResponse.json(report, { status: 200 });
+    }
+
+    // Fallback to old schema (analysis_results)
     const { data: initialAnalysis, error: analysisError } = await supabase
       .from('analysis_results')
       .select(`

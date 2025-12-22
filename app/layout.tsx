@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Jeonse Safety Checker - 전세 안전도 검사',
-  description: 'Check the safety of your jeonse deposit with comprehensive property analysis',
+  title: 'K-Rent Safety - 전월세 안전 검사',
+  description: 'Check your jeonse deposit safety and wolse rent fairness with comprehensive property analysis',
 }
 
 export default function RootLayout({

@@ -63,42 +63,120 @@ export async function POST(request: Request) {
       );
     }
 
-    // Payment successful - update database
-    const { data: payment, error: updateError } = await supabaseAdmin
+    // Payment successful - update or create database record
+    // First try to update existing record
+    const { data: existingPayment } = await supabaseAdmin
       .from('payments')
-      .update({
-        payment_key: paymentKey,
-        status: 'approved',
-        method: tossData.method,
-        approved_at: tossData.approvedAt,
-        receipt_url: tossData.receipt?.url,
-        card_info: tossData.card || null,
-        virtual_account_info: tossData.virtualAccount || null,
-        transfer_info: tossData.transfer || null,
-        mobile_phone_info: tossData.mobilePhone || null,
-        toss_response: tossData,
-      })
+      .select('id')
       .eq('order_id', orderId)
-      .select()
-      .single();
+      .maybeSingle();
 
-    if (updateError) {
-      console.error('Error updating payment:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update payment record' },
-        { status: 500 }
-      );
+    let payment;
+
+    if (existingPayment) {
+      // Update existing payment record
+      const { data: updatedPayment, error: updateError } = await supabaseAdmin
+        .from('payments')
+        .update({
+          payment_key: paymentKey,
+          status: 'approved',
+          method: tossData.method,
+          approved_at: tossData.approvedAt,
+          receipt_url: tossData.receipt?.url,
+          card_info: tossData.card || null,
+          virtual_account_info: tossData.virtualAccount || null,
+          transfer_info: tossData.transfer || null,
+          mobile_phone_info: tossData.mobilePhone || null,
+          toss_response: tossData,
+        })
+        .eq('order_id', orderId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating payment:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update payment record' },
+          { status: 500 }
+        );
+      }
+      payment = updatedPayment;
+    } else {
+      // Create new payment record (for preview flow where no payment was created upfront)
+      // Extract analysis ID from orderId format: jeonse_UUID_timestamp or wolse_UUID_timestamp
+      let analysisId = null;
+      const orderIdParts = orderId.split('_');
+      if (orderIdParts.length >= 2) {
+        // UUID is the second part (index 1)
+        const potentialUuid = orderIdParts[1];
+        // Validate it looks like a UUID
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(potentialUuid)) {
+          analysisId = potentialUuid;
+        }
+      }
+
+      const { data: newPayment, error: insertError } = await supabaseAdmin
+        .from('payments')
+        .insert({
+          order_id: orderId,
+          order_name: tossData.orderName || 'Analysis Payment',
+          payment_key: paymentKey,
+          amount: amount,
+          currency: 'KRW',
+          status: 'approved',
+          method: tossData.method,
+          approved_at: tossData.approvedAt,
+          receipt_url: tossData.receipt?.url,
+          card_info: tossData.card || null,
+          virtual_account_info: tossData.virtualAccount || null,
+          transfer_info: tossData.transfer || null,
+          mobile_phone_info: tossData.mobilePhone || null,
+          toss_response: tossData,
+          analysis_id: analysisId,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating payment:', insertError);
+        return NextResponse.json(
+          { error: 'Failed to create payment record' },
+          { status: 500 }
+        );
+      }
+      payment = newPayment;
     }
 
-    // Update analysis_results with payment_id
-    if (payment.analysis_id) {
-      await supabaseAdmin
-        .from('analysis_results')
-        .update({
-          payment_id: payment.id,
-          payment_status: 'approved',
-        })
-        .eq('id', payment.analysis_id);
+    // Update analysis with payment_id
+    // Get the analysis ID from either the column or from toss_response
+    const linkedAnalysisId = payment.analysis_id || payment.toss_response?.linked_analysis_id;
+
+    if (linkedAnalysisId) {
+      // Try new schema first (analyses table)
+      const { data: newAnalysis } = await supabaseAdmin
+        .from('analyses')
+        .select('id')
+        .eq('id', linkedAnalysisId)
+        .single();
+
+      if (newAnalysis) {
+        await supabaseAdmin
+          .from('analyses')
+          .update({
+            payment_id: payment.id,
+            payment_status: 'approved',
+          })
+          .eq('id', linkedAnalysisId);
+      } else {
+        // Fall back to old schema (analysis_results)
+        await supabaseAdmin
+          .from('analysis_results')
+          .update({
+            payment_id: payment.id,
+            payment_status: 'approved',
+          })
+          .eq('id', linkedAnalysisId);
+      }
     }
 
     return NextResponse.json({

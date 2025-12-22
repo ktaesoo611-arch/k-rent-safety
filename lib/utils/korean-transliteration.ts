@@ -167,7 +167,8 @@ const SPECIAL_MAPPINGS: Record<string, string> = {
 
   // Specific apartments
   '이스트폴': 'EASTPOLE',
-  '텐즈힐': 'Tens Hill',
+  '센트라스': 'CENTLAS',
+  '텐즈힐': 'TENS HILL',
   '엘마파트': 'Elma Apartments',
   '까치마을': 'Kkachi Village',
   'SKY-L65': 'SKY-L65',

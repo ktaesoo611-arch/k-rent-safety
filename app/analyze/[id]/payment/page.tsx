@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { loadPaymentWidget } from '@tosspayments/payment-widget-sdk';
 
 const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY || '';
@@ -210,100 +211,175 @@ export default function PaymentPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => router.push(`/analyze/${analysisId}`)}
-            className="w-full bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-colors"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-[#FDFBF7]">
+        {/* Warm gradient background */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FEF7ED] via-[#FDFBF7] to-[#F5F0E8]" />
+          <div className="absolute top-20 right-[10%] w-64 h-64 bg-amber-200/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-[30%] left-[5%] w-48 h-48 bg-orange-200/20 rounded-full blur-3xl" />
+        </div>
+
+        {/* Header */}
+        <header className="relative z-10 bg-[#FDFBF7]/80 backdrop-blur-md border-b border-amber-100">
+          <div className="container mx-auto px-6 py-4 max-w-7xl">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200 group-hover:scale-105 transition-transform">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <span className="text-xl font-semibold text-[#2D3748]">K-Rent Safety</span>
+            </Link>
+          </div>
+        </header>
+
+        <div className="relative z-10 flex items-center justify-center p-8 min-h-[80vh]">
+          <div className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-amber-900/5 p-8 text-center border border-amber-100">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-2xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-[#1A202C] mb-2">Payment Error</h2>
+            <p className="text-[#4A5568] mb-6">{error}</p>
+            <button
+              onClick={() => router.push(`/analyze/${analysisId}`)}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-amber-200/50 transition-all font-semibold"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-          <div className="inline-block px-4 py-2 bg-emerald-100 rounded-full text-sm font-semibold mb-4 text-emerald-700">
-            Step 2 of 4
+    <div className="min-h-screen bg-[#FDFBF7]">
+      {/* Warm gradient background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FEF7ED] via-[#FDFBF7] to-[#F5F0E8]" />
+        <div className="absolute top-20 right-[10%] w-64 h-64 bg-amber-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-[30%] left-[5%] w-48 h-48 bg-orange-200/20 rounded-full blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 bg-[#FDFBF7]/80 backdrop-blur-md border-b border-amber-100">
+        <div className="container mx-auto px-6 py-4 max-w-7xl">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold text-[#2D3748]">K-Rent Safety</span>
+          </Link>
+        </div>
+      </header>
+
+      <div className="relative z-10 container mx-auto px-6 py-16 max-w-2xl">
+        {/* Breadcrumb */}
+        <div className="mb-8">
+          <Link href="/" className="text-amber-600 hover:text-amber-700 font-medium inline-flex items-center gap-2 group">
+            <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to home
+          </Link>
+        </div>
+
+        {/* Header Section */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-full text-sm font-semibold mb-6 border border-amber-200">
+            <span>Jeonse Safety</span>
+            <span className="text-amber-400">|</span>
+            <span>Step 2 of 4</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Payment
+          <h1 className="text-4xl md:text-5xl font-bold text-[#1A202C] mb-4 tracking-tight" style={{ letterSpacing: '-0.03em' }}>
+            Complete Payment
           </h1>
-          <p className="text-gray-600">
-            Complete payment for Jeonse Safety Analysis service
+          <p className="text-xl text-[#4A5568]">
+            Pay for K-Rent Safety Analysis service
           </p>
         </div>
 
-        {/* Payment Info */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-          <div className="flex justify-between items-center mb-4 pb-4 border-b">
-            <span className="text-gray-600">Service</span>
-            <span className="font-semibold text-gray-900">Jeonse Safety Analysis</span>
+        {/* Payment Info Card */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-amber-900/5 p-8 mb-6 border border-amber-100">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-amber-100">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center">
+              <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#1A202C]">K-Rent Safety Analysis</h2>
+              <p className="text-[#718096]">Complete jeonse safety check</p>
+            </div>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-gray-600">Amount</span>
-            <span className="text-2xl font-bold text-blue-600">
-              ₩{Number(PAYMENT_AMOUNT).toLocaleString()}
-            </span>
+            <span className="text-[#4A5568] font-medium">Amount</span>
+            <div className="text-right">
+              <span className="text-3xl font-bold text-amber-600">
+                {PAYMENT_AMOUNT === 0 ? 'Free' : `₩${Number(PAYMENT_AMOUNT).toLocaleString()}`}
+              </span>
+              {PAYMENT_AMOUNT === 0 && (
+                <p className="text-sm text-amber-600 font-medium">Beta Period</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Payment Button */}
         {isLoading ? (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading payment information...</p>
+          <div className="bg-white rounded-3xl shadow-xl shadow-amber-900/5 p-12 text-center border border-amber-100">
+            <div className="w-16 h-16 mx-auto mb-4 relative">
+              <div className="absolute inset-0 border-4 border-amber-200 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p className="text-[#4A5568] font-medium">Loading payment information...</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Pay Now</h2>
-
+          <div className="bg-white rounded-3xl shadow-xl shadow-amber-900/5 p-8 border border-amber-100">
             {!showPaymentWidget ? (
               <>
-                <div className="space-y-4 mb-6">
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm text-gray-700 mb-2">
-                      <span className="font-semibold">💳 Test Payment Integration:</span> For Toss Payments Review
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Click "Test Payment" to see Toss Payments checkout integration
-                    </p>
+                <div className="space-y-4 mb-8">
+                  <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">💳</span>
+                      <div>
+                        <p className="font-semibold text-[#1A202C] mb-1">Test Payment Integration</p>
+                        <p className="text-sm text-[#4A5568]">For Toss Payments Review - Click to see checkout integration</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="text-sm text-gray-700 mb-2">
-                      <span className="font-semibold">🎉 Beta Free Trial:</span> No payment required
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Click "Continue Free" to use the service without payment during beta
-                    </p>
+                  <div className="p-5 bg-amber-50 rounded-2xl border border-amber-200">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🎉</span>
+                      <div>
+                        <p className="font-semibold text-[#1A202C] mb-1">Beta Free Trial</p>
+                        <p className="text-sm text-[#4A5568]">Use the service without payment during beta period</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Payment Buttons */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {/* Test Payment Button - For Toss Demo */}
                   <button
                     onClick={() => handlePayment(14900)}
-                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-2xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
                   >
-                    <span>💳</span>
+                    <span className="text-xl">💳</span>
                     <span>Test Payment (₩14,900)</span>
                   </button>
 
                   {/* Free Beta Button */}
                   <button
                     onClick={() => handlePayment(0)}
-                    className="w-full bg-emerald-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-lg font-semibold px-8 py-4 rounded-2xl hover:shadow-xl hover:shadow-amber-200/50 transition-all duration-200 hover:-translate-y-1 flex items-center justify-center gap-3"
                   >
-                    <span>🎉</span>
+                    <span className="text-xl">🎉</span>
                     <span>Continue Free (Beta)</span>
                   </button>
                 </div>
@@ -314,8 +390,8 @@ export default function PaymentPage() {
                 <div className="space-y-6">
                   {/* Payment Methods */}
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
-                    <div id="payment-method" className="min-h-[200px]"></div>
+                    <h3 className="text-lg font-semibold text-[#1A202C] mb-3">Payment Method</h3>
+                    <div id="payment-method" className="min-h-[200px] border border-amber-100 rounded-2xl overflow-hidden"></div>
                   </div>
 
                   {/* Agreement */}
@@ -326,7 +402,7 @@ export default function PaymentPage() {
                   {/* Payment Button */}
                   <button
                     onClick={handlePaymentWidgetSubmit}
-                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="w-full bg-blue-600 text-white text-lg font-semibold px-8 py-4 rounded-2xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     Pay ₩14,900
                   </button>
@@ -334,9 +410,12 @@ export default function PaymentPage() {
                   {/* Back Button */}
                   <button
                     onClick={() => setShowPaymentWidget(false)}
-                    className="w-full bg-gray-200 text-gray-700 text-sm font-medium px-6 py-3 rounded-xl hover:bg-gray-300 transition-colors"
+                    className="w-full bg-gray-100 text-[#4A5568] text-sm font-medium px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                   >
-                    ← Back to Options
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Options
                   </button>
                 </div>
               </>
@@ -344,18 +423,23 @@ export default function PaymentPage() {
           </div>
         )}
 
-        {/* Information */}
-        <div className="mt-6 bg-emerald-50 rounded-xl p-6">
-          <h3 className="font-semibold text-gray-900 mb-2 flex items-center">
-            <span className="text-emerald-600 mr-2">ℹ️</span>
-            Important Information
-          </h3>
-          <ul className="text-sm text-gray-700 space-y-2">
-            <li>• After payment, you can upload your property register document for analysis</li>
-            <li>• Multiple payment methods supported: cards, bank transfer, and mobile payments</li>
-            <li>• All payments are securely processed through Toss Payments</li>
-            <li>• For payment inquiries, please contact customer support</li>
-          </ul>
+        {/* Information Card */}
+        <div className="mt-6 bg-gradient-to-br from-amber-900 to-orange-950 rounded-3xl p-6 text-white shadow-xl shadow-amber-900/20">
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-amber-100/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-bold text-amber-100 mb-2 text-lg">Important Information</h3>
+              <ul className="text-sm text-amber-50/90 space-y-2">
+                <li>After payment, you can upload your property register document for analysis</li>
+                <li>Multiple payment methods supported: cards, bank transfer, and mobile payments</li>
+                <li>All payments are securely processed through Toss Payments</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

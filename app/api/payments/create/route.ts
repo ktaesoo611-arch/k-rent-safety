@@ -23,13 +23,32 @@ export async function POST(request: Request) {
     const { analysisId, amount, orderName, customerEmail, customerName } = body;
 
     // Verify the analysis exists and belongs to the user
-    const { data: analysis, error: analysisError } = await supabaseAdmin
-      .from('analysis_results')
+    // Check new schema first (analyses table), then fall back to old schema (analysis_results)
+    let analysis: { id: string; user_id: string } | null = null;
+
+    // Try new schema first
+    const { data: newAnalysis, error: newAnalysisError } = await supabaseAdmin
+      .from('analyses')
       .select('id, user_id')
       .eq('id', analysisId)
       .single();
 
-    if (analysisError || !analysis) {
+    if (newAnalysis) {
+      analysis = newAnalysis;
+    } else {
+      // Fall back to old schema
+      const { data: oldAnalysis, error: oldAnalysisError } = await supabaseAdmin
+        .from('analysis_results')
+        .select('id, user_id')
+        .eq('id', analysisId)
+        .single();
+
+      if (oldAnalysis) {
+        analysis = oldAnalysis;
+      }
+    }
+
+    if (!analysis) {
       return NextResponse.json(
         { error: 'Analysis not found' },
         { status: 404 }
@@ -47,11 +66,20 @@ export async function POST(request: Request) {
     // Generate unique order ID
     const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
+    // Check if analysis is in old schema (analysis_results) for FK constraint
+    const { data: oldSchemaAnalysis } = await supabaseAdmin
+      .from('analysis_results')
+      .select('id')
+      .eq('id', analysisId)
+      .single();
+
     // Create payment record in database
+    // Note: analysis_id FK only works with analysis_results table
+    // For new schema (analyses table), we set analysis_id to null and store in toss_response
     const { data: payment, error: paymentError } = await supabaseAdmin
       .from('payments')
       .insert({
-        analysis_id: analysisId,
+        analysis_id: oldSchemaAnalysis ? analysisId : null, // Only set if in old schema
         order_id: orderId,
         order_name: orderName,
         amount: amount,
@@ -59,6 +87,7 @@ export async function POST(request: Request) {
         customer_email: customerEmail,
         customer_name: customerName,
         status: 'pending',
+        toss_response: { linked_analysis_id: analysisId }, // Store analysis ID for new schema
       })
       .select()
       .single();
