@@ -81,6 +81,15 @@ export class WolseRateCalculator {
     const rentLower = q1Rent - 1.5 * iqrRent;
     const rentUpper = q3Rent + 1.5 * iqrRent;
 
+    // Debug logging
+    console.log('\n   📊 IQR Bounds (Market Rate Calc):');
+    console.log(`      Deposit: Q1=${(q1Deposit/10000).toFixed(0)}만 Q3=${(q3Deposit/10000).toFixed(0)}만 IQR=${(iqrDeposit/10000).toFixed(0)}만`);
+    console.log(`      Deposit bounds: ${(depositLower/10000).toFixed(0)}만 ~ ${(depositUpper/10000).toFixed(0)}만`);
+    console.log(`      Rent: Q1=${(q1Rent/10000).toFixed(0)}만 Q3=${(q3Rent/10000).toFixed(0)}만 IQR=${(iqrRent/10000).toFixed(0)}만`);
+    console.log(`      Rent bounds: ${(rentLower/10000).toFixed(0)}만 ~ ${(rentUpper/10000).toFixed(0)}만`);
+    console.log(`      Min/Max Deposit: ${(sortedDeposits[0].deposit/10000).toFixed(0)}만 ~ ${(sortedDeposits[sortedDeposits.length-1].deposit/10000).toFixed(0)}만`);
+    console.log(`      Min/Max Rent: ${(sortedRents[0].monthlyRent/10000).toFixed(0)}만 ~ ${(sortedRents[sortedRents.length-1].monthlyRent/10000).toFixed(0)}만`);
+
     const clean: WolseTransaction[] = [];
     const removed: WolseTransaction[] = [];
 
