@@ -14,6 +14,7 @@ interface PaymentModalProps {
   orderName: string;
   analysisId: string;
   isBetaPeriod?: boolean;
+  isUnlocking?: boolean;
   previewResult?: any;
   inputData?: any;
 }
@@ -27,6 +28,7 @@ export function PaymentModal({
   orderName,
   analysisId,
   isBetaPeriod = true,
+  isUnlocking = false,
   previewResult,
   inputData
 }: PaymentModalProps) {
@@ -101,7 +103,6 @@ export function PaymentModal({
   }, [paymentWidget, analysisId, orderName, previewResult, inputData, amount]);
 
   const handleFreeBeta = useCallback(() => {
-    setIsLoading(true);
     onFreeBeta();
   }, [onFreeBeta]);
 
@@ -209,10 +210,10 @@ export function PaymentModal({
                 {isBetaPeriod ? (
                   <button
                     onClick={handleFreeBeta}
-                    disabled={isLoading}
+                    disabled={isUnlocking}
                     className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-4 rounded-2xl hover:shadow-lg hover:shadow-amber-200/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? (
+                    {isUnlocking ? (
                       <span className="flex items-center justify-center gap-2">
                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />

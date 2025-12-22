@@ -322,6 +322,7 @@ export default function WolseAnalyzePage() {
         orderName="Wolse Price Analysis"
         analysisId={tempAnalysisId}
         isBetaPeriod={true}
+        isUnlocking={unlocking}
         previewResult={previewResult}
         inputData={inputData}
       />
