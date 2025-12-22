@@ -108,7 +108,7 @@ export default function PricingPage() {
                 <p className="text-amber-50 mb-4">Comprehensive deposit safety analysis</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-bold">₩0</span>
-                  <span className="text-amber-100 line-through">₩29,000</span>
+                  <span className="text-amber-100 line-through">₩14,900</span>
                 </div>
               </div>
 
