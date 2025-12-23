@@ -275,6 +275,7 @@ export class WolseRateCalculator {
    * Formula: rate = ((rent1 - rent2) × 12) / (deposit2 - deposit1) × 100
    *
    * Only valid when:
+   * - SAME BUILDING (apartmentName must match)
    * - Different deposit amounts (deposit difference > 5M won)
    * - Both have monthly rent > 0
    * - Resulting rate is within reasonable range (0-15%)
@@ -283,57 +284,77 @@ export class WolseRateCalculator {
     const pairs: ConversionRatePair[] = [];
     const now = new Date();
 
-    // Compare each transaction with others
-    for (let i = 0; i < transactions.length; i++) {
-      for (let j = i + 1; j < transactions.length; j++) {
-        const t1 = transactions[i];
-        const t2 = transactions[j];
+    // Group transactions by building name to avoid cross-building comparisons
+    const buildingGroups = new Map<string, WolseTransaction[]>();
+    for (const t of transactions) {
+      const key = t.apartmentName;
+      if (!buildingGroups.has(key)) {
+        buildingGroups.set(key, []);
+      }
+      buildingGroups.get(key)!.push(t);
+    }
 
-        // Skip if deposits are too similar (need meaningful difference)
-        const depositDiff = Math.abs(t1.deposit - t2.deposit);
-        if (depositDiff < 5000000) continue; // Need at least 5M won difference
+    console.log(`\n   🏢 Building groups: ${buildingGroups.size} buildings`);
+    buildingGroups.forEach((txs, name) => {
+      console.log(`      - ${name}: ${txs.length} transactions`);
+    });
 
-        // Skip if either has zero rent (pure jeonse)
-        if (t1.monthlyRent === 0 || t2.monthlyRent === 0) continue;
+    // Compare transactions only within the same building
+    for (const [buildingName, buildingTransactions] of buildingGroups) {
+      // Need at least 2 transactions to form a pair
+      if (buildingTransactions.length < 2) continue;
 
-        // Calculate implied rate
-        // Higher deposit = lower rent, so:
-        // If deposit1 < deposit2, then rent1 should be > rent2
-        let impliedRate: number;
-        if (t1.deposit < t2.deposit) {
-          // t1 has lower deposit, should have higher rent
-          const rentDiff = t1.monthlyRent - t2.monthlyRent;
-          const depositDiffAmount = t2.deposit - t1.deposit;
-          impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
-        } else {
-          // t2 has lower deposit, should have higher rent
-          const rentDiff = t2.monthlyRent - t1.monthlyRent;
-          const depositDiffAmount = t1.deposit - t2.deposit;
-          impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
+      for (let i = 0; i < buildingTransactions.length; i++) {
+        for (let j = i + 1; j < buildingTransactions.length; j++) {
+          const t1 = buildingTransactions[i];
+          const t2 = buildingTransactions[j];
+
+          // Skip if deposits are too similar (need meaningful difference)
+          const depositDiff = Math.abs(t1.deposit - t2.deposit);
+          if (depositDiff < 5000000) continue; // Need at least 5M won difference
+
+          // Skip if either has zero rent (pure jeonse)
+          if (t1.monthlyRent === 0 || t2.monthlyRent === 0) continue;
+
+          // Calculate implied rate
+          // Higher deposit = lower rent, so:
+          // If deposit1 < deposit2, then rent1 should be > rent2
+          let impliedRate: number;
+          if (t1.deposit < t2.deposit) {
+            // t1 has lower deposit, should have higher rent
+            const rentDiff = t1.monthlyRent - t2.monthlyRent;
+            const depositDiffAmount = t2.deposit - t1.deposit;
+            impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
+          } else {
+            // t2 has lower deposit, should have higher rent
+            const rentDiff = t2.monthlyRent - t1.monthlyRent;
+            const depositDiffAmount = t1.deposit - t2.deposit;
+            impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
+          }
+
+          // Filter out unrealistic rates (outliers)
+          if (impliedRate < 0 || impliedRate > 15) continue;
+
+          // Calculate average days ago for weighting
+          const date1 = new Date(t1.year, t1.month - 1, t1.day);
+          const date2 = new Date(t2.year, t2.month - 1, t2.day);
+          const daysAgo1 = (now.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24);
+          const daysAgo2 = (now.getTime() - date2.getTime()) / (1000 * 60 * 60 * 24);
+          const avgDaysAgo = (daysAgo1 + daysAgo2) / 2;
+
+          // Time-based weight: more recent = higher weight
+          // weight = 1 / (1 + months_ago × 0.2)
+          const monthsAgo = avgDaysAgo / 30;
+          const weight = 1 / (1 + monthsAgo * 0.2);
+
+          pairs.push({
+            transaction1: t1,
+            transaction2: t2,
+            impliedRate,
+            daysAgo: avgDaysAgo,
+            weight
+          });
         }
-
-        // Filter out unrealistic rates (outliers)
-        if (impliedRate < 0 || impliedRate > 15) continue;
-
-        // Calculate average days ago for weighting
-        const date1 = new Date(t1.year, t1.month - 1, t1.day);
-        const date2 = new Date(t2.year, t2.month - 1, t2.day);
-        const daysAgo1 = (now.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24);
-        const daysAgo2 = (now.getTime() - date2.getTime()) / (1000 * 60 * 60 * 24);
-        const avgDaysAgo = (daysAgo1 + daysAgo2) / 2;
-
-        // Time-based weight: more recent = higher weight
-        // weight = 1 / (1 + months_ago × 0.2)
-        const monthsAgo = avgDaysAgo / 30;
-        const weight = 1 / (1 + monthsAgo * 0.2);
-
-        pairs.push({
-          transaction1: t1,
-          transaction2: t2,
-          impliedRate,
-          daysAgo: avgDaysAgo,
-          weight
-        });
       }
     }
 
