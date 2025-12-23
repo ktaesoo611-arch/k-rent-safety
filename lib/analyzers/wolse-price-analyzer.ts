@@ -303,15 +303,18 @@ export class WolsePriceAnalyzer {
       }, 0);
       rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
 
+      // Slope in 만원 per 1억 deposit: slope (원/원) × 1억 / 1만 = slope × 10000
+      const slopePerEok = slope * 10000;
+
       console.log(`\n   📐 LINEAR REGRESSION:`);
       console.log('   ' + '-'.repeat(50));
-      console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${(slope * 100000000).toFixed(2)}만원/1억) × Deposit`);
-      console.log(`      Slope: ${(slope * 100000000).toFixed(2)}만원 per 1억 deposit`);
+      console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${slopePerEok.toFixed(2)}만원/1억) × Deposit`);
+      console.log(`      Slope: ${slopePerEok.toFixed(2)}만원 per 1억 deposit`);
       console.log(`      Intercept: ${(intercept / 10000).toFixed(2)}만원 (rent at 0 deposit)`);
       console.log(`      R²: ${(rSquared * 100).toFixed(1)}% (goodness of fit)`);
       console.log('   ' + '-'.repeat(50));
       console.log(`      At user's deposit (${(quote.deposit / 10000).toLocaleString()}만원):`);
-      console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${(slope * 100000000).toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
+      console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${slopePerEok.toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
       console.log(`                    = ${(expectedRent / 10000).toFixed(2)}만원`);
       console.log('   ' + '-'.repeat(50));
 
