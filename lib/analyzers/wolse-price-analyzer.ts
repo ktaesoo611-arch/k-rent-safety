@@ -271,57 +271,76 @@ export class WolsePriceAnalyzer {
       console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원`);
     });
 
-    // Step 3: Linear regression to predict rent at user's deposit
-    // Rent = intercept + slope × Deposit
+    // Step 3: Theil-Sen median regression (robust to outliers)
+    // 1. Calculate slopes between all pairs of points
+    // 2. Take median of all slopes
+    // 3. Calculate intercept using median
     const n = clean.length;
-    const sumX = clean.reduce((sum, t) => sum + t.deposit, 0);
-    const sumY = clean.reduce((sum, t) => sum + t.monthlyRent, 0);
-    const sumXY = clean.reduce((sum, t) => sum + t.deposit * t.monthlyRent, 0);
-    const sumX2 = clean.reduce((sum, t) => sum + t.deposit * t.deposit, 0);
-
-    const denominator = n * sumX2 - sumX * sumX;
     let expectedRent: number;
     let slope = 0;
     let intercept = 0;
-    let rSquared = 0;
 
-    if (Math.abs(denominator) < 1e-10) {
-      // Can't fit regression - use mean rent
-      console.log('\n   ⚠️ Cannot fit regression (no variance in deposits) - using mean rent');
+    if (n < 2) {
+      console.log('\n   ⚠️ Not enough points for regression - using mean rent');
       expectedRent = meanRent;
     } else {
-      slope = (n * sumXY - sumX * sumY) / denominator;
-      intercept = (sumY - slope * sumX) / n;
-      expectedRent = intercept + slope * quote.deposit;
+      // Calculate all pairwise slopes
+      const slopes: number[] = [];
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const dx = clean[j].deposit - clean[i].deposit;
+          if (Math.abs(dx) > 1000000) { // At least 100만원 difference
+            const dy = clean[j].monthlyRent - clean[i].monthlyRent;
+            slopes.push(dy / dx);
+          }
+        }
+      }
 
-      // Calculate R-squared
-      const yMean = sumY / n;
-      const ssTotal = clean.reduce((sum, t) => sum + Math.pow(t.monthlyRent - yMean, 2), 0);
-      const ssResidual = clean.reduce((sum, t) => {
-        const predicted = intercept + slope * t.deposit;
-        return sum + Math.pow(t.monthlyRent - predicted, 2);
-      }, 0);
-      rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
-
-      // Slope in 만원 per 1억 deposit: slope (원/원) × 1억 / 1만 = slope × 10000
-      const slopePerEok = slope * 10000;
-
-      console.log(`\n   📐 LINEAR REGRESSION:`);
-      console.log('   ' + '-'.repeat(50));
-      console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${slopePerEok.toFixed(2)}만원/1억) × Deposit`);
-      console.log(`      Slope: ${slopePerEok.toFixed(2)}만원 per 1억 deposit`);
-      console.log(`      Intercept: ${(intercept / 10000).toFixed(2)}만원 (rent at 0 deposit)`);
-      console.log(`      R²: ${(rSquared * 100).toFixed(1)}% (goodness of fit)`);
-      console.log('   ' + '-'.repeat(50));
-      console.log(`      At user's deposit (${(quote.deposit / 10000).toLocaleString()}만원):`);
-      console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${slopePerEok.toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
-      console.log(`                    = ${(expectedRent / 10000).toFixed(2)}만원`);
-      console.log('   ' + '-'.repeat(50));
-
-      // Sanity check: if expected rent is negative or unreasonably high, fall back
-      if (expectedRent < 0) {
-        console.log('   ⚠️ Regression produced negative rent - using mean rent');
+      if (slopes.length === 0) {
+        console.log('\n   ⚠️ Cannot calculate slopes - using mean rent');
         expectedRent = meanRent;
+      } else {
+        // Median slope
+        slopes.sort((a, b) => a - b);
+        slope = slopes[Math.floor(slopes.length / 2)];
+
+        // Calculate intercepts for all points and take median
+        const intercepts = clean.map(t => t.monthlyRent - slope * t.deposit);
+        intercepts.sort((a, b) => a - b);
+        intercept = intercepts[Math.floor(intercepts.length / 2)];
+
+        expectedRent = intercept + slope * quote.deposit;
+
+        // Calculate R-squared for reference
+        const yMean = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / n;
+        const ssTotal = clean.reduce((sum, t) => sum + Math.pow(t.monthlyRent - yMean, 2), 0);
+        const ssResidual = clean.reduce((sum, t) => {
+          const predicted = intercept + slope * t.deposit;
+          return sum + Math.pow(t.monthlyRent - predicted, 2);
+        }, 0);
+        const rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
+
+        // Slope in 만원 per 1억 deposit: slope (원/원) × 1억 / 1만 = slope × 10000
+        const slopePerEok = slope * 10000;
+
+        console.log(`\n   📐 MEDIAN REGRESSION (Theil-Sen, robust to outliers):`);
+        console.log('   ' + '-'.repeat(50));
+        console.log(`      Pairwise slopes calculated: ${slopes.length}`);
+        console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${slopePerEok.toFixed(2)}만원/1억) × Deposit`);
+        console.log(`      Slope: ${slopePerEok.toFixed(2)}만원 per 1억 deposit`);
+        console.log(`      Intercept: ${(intercept / 10000).toFixed(2)}만원 (rent at 0 deposit)`);
+        console.log(`      R²: ${(rSquared * 100).toFixed(1)}% (goodness of fit)`);
+        console.log('   ' + '-'.repeat(50));
+        console.log(`      At user's deposit (${(quote.deposit / 10000).toLocaleString()}만원):`);
+        console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${slopePerEok.toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
+        console.log(`                    = ${(expectedRent / 10000).toFixed(2)}만원`);
+        console.log('   ' + '-'.repeat(50));
+
+        // Sanity check: if expected rent is negative, fall back
+        if (expectedRent < 0) {
+          console.log('   ⚠️ Regression produced negative rent - using mean rent');
+          expectedRent = meanRent;
+        }
       }
     }
 
