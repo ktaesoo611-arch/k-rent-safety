@@ -35,15 +35,22 @@ export class WolsePriceAnalyzer {
 
   /**
    * Remove outliers from transactions using IQR method
-   * Outliers are transactions where deposit OR rent falls outside 1.5×IQR
+   * Outliers are transactions where deposit OR rent falls outside IQR bounds
+   * Uses tighter bounds (1.0×IQR) for dong/district level data due to higher variance
    */
-  private removeOutliers(transactions: WolseTransaction[]): {
+  private removeOutliers(
+    transactions: WolseTransaction[],
+    dataSource: 'building' | 'dong' | 'district' = 'building'
+  ): {
     clean: WolseTransaction[];
     removed: WolseTransaction[];
   } {
     if (transactions.length < 4) {
       return { clean: transactions, removed: [] };
     }
+
+    // Use tighter bounds for dong/district level data (higher variance)
+    const multiplier = dataSource === 'building' ? 1.5 : 1.0;
 
     // Calculate IQR for deposits
     const sortedDeposits = [...transactions].sort((a, b) => a.deposit - b.deposit);
@@ -52,16 +59,16 @@ export class WolsePriceAnalyzer {
     const q1Deposit = sortedDeposits[q1DepositIdx].deposit;
     const q3Deposit = sortedDeposits[q3DepositIdx].deposit;
     const iqrDeposit = q3Deposit - q1Deposit;
-    const depositLower = q1Deposit - 1.5 * iqrDeposit;
-    const depositUpper = q3Deposit + 1.5 * iqrDeposit;
+    const depositLower = q1Deposit - multiplier * iqrDeposit;
+    const depositUpper = q3Deposit + multiplier * iqrDeposit;
 
     // Calculate IQR for rents
     const sortedRents = [...transactions].sort((a, b) => a.monthlyRent - b.monthlyRent);
     const q1Rent = sortedRents[q1DepositIdx].monthlyRent;
     const q3Rent = sortedRents[q3DepositIdx].monthlyRent;
     const iqrRent = q3Rent - q1Rent;
-    const rentLower = q1Rent - 1.5 * iqrRent;
-    const rentUpper = q3Rent + 1.5 * iqrRent;
+    const rentLower = q1Rent - multiplier * iqrRent;
+    const rentUpper = q3Rent + multiplier * iqrRent;
 
     const clean: WolseTransaction[] = [];
     const removed: WolseTransaction[] = [];
@@ -107,7 +114,8 @@ export class WolsePriceAnalyzer {
     const rentComparison = this.compareUserRentToMarket(
       quote,
       marketData.transactions,
-      marketData.marketRate
+      marketData.marketRate,
+      marketData.dataSource
     );
 
     // Step 3: Derive user's implied rate for backwards compatibility
@@ -196,7 +204,8 @@ export class WolsePriceAnalyzer {
   private compareUserRentToMarket(
     quote: WolseQuote,
     transactions: WolseTransaction[],
-    marketRate: number
+    marketRate: number,
+    dataSource: 'building' | 'dong' | 'district' = 'building'
   ): UserRentComparison {
     console.log('\n' + '='.repeat(60));
     console.log('📊 COMPARING USER RENT TO MARKET EXPECTATION');
@@ -222,8 +231,8 @@ export class WolsePriceAnalyzer {
       return defaultResult;
     }
 
-    // Step 1: Remove outliers
-    const { clean, removed } = this.removeOutliers(transactions);
+    // Step 1: Remove outliers (use tighter bounds for dong/district level data)
+    const { clean, removed } = this.removeOutliers(transactions, dataSource);
     console.log(`\n   🧹 OUTLIER REMOVAL (IQR method):`);
     console.log(`      Original: ${transactions.length} transactions`);
     console.log(`      Removed: ${removed.length} outliers`);

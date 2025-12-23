@@ -53,15 +53,22 @@ export class WolseRateCalculator {
 
   /**
    * Remove outliers from transactions using IQR method
-   * Outliers are transactions where deposit OR rent falls outside 1.5×IQR
+   * Outliers are transactions where deposit OR rent falls outside IQR bounds
+   * Uses tighter bounds (1.0×IQR) for dong/district level data due to higher variance
    */
-  private removeOutliers(transactions: WolseTransaction[]): {
+  private removeOutliers(
+    transactions: WolseTransaction[],
+    dataSource: 'building' | 'dong' | 'district' = 'building'
+  ): {
     clean: WolseTransaction[];
     removed: WolseTransaction[];
   } {
     if (transactions.length < 4) {
       return { clean: transactions, removed: [] };
     }
+
+    // Use tighter bounds for dong/district level data (higher variance)
+    const multiplier = dataSource === 'building' ? 1.5 : 1.0;
 
     // Calculate IQR for deposits
     const sortedDeposits = [...transactions].sort((a, b) => a.deposit - b.deposit);
@@ -70,19 +77,19 @@ export class WolseRateCalculator {
     const q1Deposit = sortedDeposits[q1DepositIdx].deposit;
     const q3Deposit = sortedDeposits[q3DepositIdx].deposit;
     const iqrDeposit = q3Deposit - q1Deposit;
-    const depositLower = q1Deposit - 1.5 * iqrDeposit;
-    const depositUpper = q3Deposit + 1.5 * iqrDeposit;
+    const depositLower = q1Deposit - multiplier * iqrDeposit;
+    const depositUpper = q3Deposit + multiplier * iqrDeposit;
 
     // Calculate IQR for rents
     const sortedRents = [...transactions].sort((a, b) => a.monthlyRent - b.monthlyRent);
     const q1Rent = sortedRents[q1DepositIdx].monthlyRent;
     const q3Rent = sortedRents[q3DepositIdx].monthlyRent;
     const iqrRent = q3Rent - q1Rent;
-    const rentLower = q1Rent - 1.5 * iqrRent;
-    const rentUpper = q3Rent + 1.5 * iqrRent;
+    const rentLower = q1Rent - multiplier * iqrRent;
+    const rentUpper = q3Rent + multiplier * iqrRent;
 
     // Debug logging
-    console.log('\n   📊 IQR Bounds (Market Rate Calc):');
+    console.log(`\n   📊 IQR Bounds (Market Rate Calc) [${dataSource} level, ${multiplier}×IQR]:`);
     console.log(`      Deposit: Q1=${(q1Deposit/10000).toFixed(0)}만 Q3=${(q3Deposit/10000).toFixed(0)}만 IQR=${(iqrDeposit/10000).toFixed(0)}만`);
     console.log(`      Deposit bounds: ${(depositLower/10000).toFixed(0)}만 ~ ${(depositUpper/10000).toFixed(0)}만`);
     console.log(`      Rent: Q1=${(q1Rent/10000).toFixed(0)}만 Q3=${(q3Rent/10000).toFixed(0)}만 IQR=${(iqrRent/10000).toFixed(0)}만`);
@@ -178,7 +185,11 @@ export class WolseRateCalculator {
     }
 
     // Step 4: Remove outliers using IQR method
-    const { clean: cleanTransactions, removed: outlierTransactions } = this.removeOutliers(transactions);
+    // Use tighter bounds (1.0×IQR) for dong/district level data
+    const { clean: cleanTransactions, removed: outlierTransactions } = this.removeOutliers(
+      transactions,
+      dataSource as 'building' | 'dong' | 'district'
+    );
     const outliersRemoved = outlierTransactions.length;
     console.log(`\n🔍 Outlier removal: ${transactions.length} → ${cleanTransactions.length} (${outliersRemoved} outliers removed)`);
 
