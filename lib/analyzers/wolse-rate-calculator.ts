@@ -17,6 +17,22 @@ export interface ConversionRatePair {
   weight: number;
 }
 
+// Extended transaction with time-adjusted rent
+interface TimeAdjustedTransaction extends WolseTransaction {
+  adjustedMonthlyRent: number;
+  adjustmentFactor: number;
+}
+
+// Monthly trend data for a building
+interface MonthlyTrendPoint {
+  yearMonth: string;
+  medianDeposit: number;
+  medianRent: number;
+  normalizedRent: number;  // rent at reference deposit
+  smoothedRent?: number;   // after moving average
+  transactionCount: number;
+}
+
 export interface MarketRateResult {
   marketRate: number;
   rate25thPercentile: number;
@@ -88,14 +104,8 @@ export class WolseRateCalculator {
     const rentLower = q1Rent - multiplier * iqrRent;
     const rentUpper = q3Rent + multiplier * iqrRent;
 
-    // Debug logging
-    console.log(`\n   📊 IQR Bounds (Market Rate Calc) [${dataSource} level, ${multiplier}×IQR]:`);
-    console.log(`      Deposit: Q1=${(q1Deposit/10000).toFixed(0)}만 Q3=${(q3Deposit/10000).toFixed(0)}만 IQR=${(iqrDeposit/10000).toFixed(0)}만`);
-    console.log(`      Deposit bounds: ${(depositLower/10000).toFixed(0)}만 ~ ${(depositUpper/10000).toFixed(0)}만`);
-    console.log(`      Rent: Q1=${(q1Rent/10000).toFixed(0)}만 Q3=${(q3Rent/10000).toFixed(0)}만 IQR=${(iqrRent/10000).toFixed(0)}만`);
-    console.log(`      Rent bounds: ${(rentLower/10000).toFixed(0)}만 ~ ${(rentUpper/10000).toFixed(0)}만`);
-    console.log(`      Min/Max Deposit: ${(sortedDeposits[0].deposit/10000).toFixed(0)}만 ~ ${(sortedDeposits[sortedDeposits.length-1].deposit/10000).toFixed(0)}만`);
-    console.log(`      Min/Max Rent: ${(sortedRents[0].monthlyRent/10000).toFixed(0)}만 ~ ${(sortedRents[sortedRents.length-1].monthlyRent/10000).toFixed(0)}만`);
+    // IQR bounds logging (concise)
+    console.log(`\n   📊 IQR Bounds [${dataSource}, ${multiplier}×IQR]: Deposit ${(depositLower/10000).toFixed(0)}~${(depositUpper/10000).toFixed(0)}만, Rent ${(rentLower/10000).toFixed(0)}~${(rentUpper/10000).toFixed(0)}만`);
 
     const clean: WolseTransaction[] = [];
     const removed: WolseTransaction[] = [];
@@ -213,8 +223,9 @@ export class WolseRateCalculator {
     };
 
     // Step 5: Calculate implied conversion rates from transaction pairs (using clean transactions)
-    const ratePairs = this.calculateConversionRatePairs(cleanTransactions);
-    console.log(`\n📈 Calculated ${ratePairs.length} valid rate pairs`);
+    // Use time-adjusted method for both building and dong level data
+    const ratePairs = this.calculateConversionRatePairsWithTimeAdjustment(cleanTransactions);
+    console.log(`\n📈 Calculated ${ratePairs.length} valid rate pairs (time-adjusted)`);
 
     if (ratePairs.length === 0) {
       // Can't calculate market rate from pairs - use baseline method
@@ -297,10 +308,8 @@ export class WolseRateCalculator {
       buildingGroups.get(key)!.push(t);
     }
 
-    console.log(`\n   🏢 Building groups: ${buildingGroups.size} buildings`);
-    buildingGroups.forEach((txs, name) => {
-      console.log(`      - ${name}: ${txs.length} transactions`);
-    });
+    const skippedBuildings = [...buildingGroups.values()].filter(txs => txs.length < 2).length;
+    console.log(`\n   🏢 Building groups: ${buildingGroups.size} buildings (${skippedBuildings} skipped <2 txs)`);
 
     // Compare transactions only within the same building
     for (const [buildingName, buildingTransactions] of buildingGroups) {
@@ -361,46 +370,11 @@ export class WolseRateCalculator {
       }
     }
 
-    // Log rate distribution for examination
+    // Log rate distribution (concise)
     if (pairs.length > 0) {
       const rates = pairs.map(p => p.impliedRate).sort((a, b) => a - b);
-      const buckets = {
-        '0-2%': 0, '2-4%': 0, '4-6%': 0, '6-8%': 0, '8-10%': 0, '10-15%': 0
-      };
-      rates.forEach(r => {
-        if (r < 2) buckets['0-2%']++;
-        else if (r < 4) buckets['2-4%']++;
-        else if (r < 6) buckets['4-6%']++;
-        else if (r < 8) buckets['6-8%']++;
-        else if (r < 10) buckets['8-10%']++;
-        else buckets['10-15%']++;
-      });
-
-      console.log('\n   📊 RATE PAIR DISTRIBUTION:');
-      console.log(`      Total pairs: ${pairs.length}`);
-      console.log(`      Rate range: ${rates[0].toFixed(2)}% ~ ${rates[rates.length-1].toFixed(2)}%`);
-      console.log(`      Median: ${rates[Math.floor(rates.length/2)].toFixed(2)}%`);
-      console.log('      Distribution:');
-      Object.entries(buckets).forEach(([range, count]) => {
-        const bar = '█'.repeat(Math.ceil(count / pairs.length * 30));
-        console.log(`         ${range}: ${count} (${(count/pairs.length*100).toFixed(0)}%) ${bar}`);
-      });
-
-      // Show some sample pairs at extremes
-      console.log('      Lowest 3 rates:');
-      rates.slice(0, 3).forEach((r, i) => {
-        const p = pairs.find(p => p.impliedRate === r);
-        if (p) {
-          console.log(`         ${r.toFixed(2)}%: ${(p.transaction1.deposit/10000).toFixed(0)}만/${(p.transaction1.monthlyRent/10000).toFixed(0)}만 vs ${(p.transaction2.deposit/10000).toFixed(0)}만/${(p.transaction2.monthlyRent/10000).toFixed(0)}만`);
-        }
-      });
-      console.log('      Highest 3 rates:');
-      rates.slice(-3).forEach((r, i) => {
-        const p = pairs.find(p => p.impliedRate === r);
-        if (p) {
-          console.log(`         ${r.toFixed(2)}%: ${(p.transaction1.deposit/10000).toFixed(0)}만/${(p.transaction1.monthlyRent/10000).toFixed(0)}만 vs ${(p.transaction2.deposit/10000).toFixed(0)}만/${(p.transaction2.monthlyRent/10000).toFixed(0)}만`);
-        }
-      });
+      const median = rates[Math.floor(rates.length / 2)];
+      console.log(`   📊 Rate pairs: ${pairs.length}, range ${rates[0].toFixed(2)}%~${rates[rates.length-1].toFixed(2)}%, median ${median.toFixed(2)}%`);
     }
 
     return pairs;
@@ -553,5 +527,271 @@ export class WolseRateCalculator {
    */
   static getBokRate(): number {
     return CURRENT_BOK_RATE;
+  }
+
+  /**
+   * Calculate time adjustment factors for a building's transactions
+   *
+   * Methodology:
+   * 1. Calculate reference deposit (median of all transactions)
+   * 2. Group transactions by month
+   * 3. For each month with >= 3 transactions, estimate rent at reference deposit
+   * 4. Apply 3-month moving average smoothing
+   * 5. Calculate adjustment factor = latest smoothed rent / each month's smoothed rent
+   */
+  private calculateTimeAdjustmentFactors(
+    transactions: WolseTransaction[]
+  ): { trendPoints: MonthlyTrendPoint[]; referenceDeposit: number } {
+    if (transactions.length < 3) {
+      return { trendPoints: [], referenceDeposit: 0 };
+    }
+
+    // Step 1: Calculate reference deposit (median)
+    const sortedDeposits = [...transactions].map(t => t.deposit).sort((a, b) => a - b);
+    const referenceDeposit = sortedDeposits[Math.floor(sortedDeposits.length / 2)];
+
+    // Step 2: Group by yearMonth
+    const monthGroups = new Map<string, WolseTransaction[]>();
+    for (const t of transactions) {
+      const yearMonth = `${t.year}${t.month.toString().padStart(2, '0')}`;
+      if (!monthGroups.has(yearMonth)) {
+        monthGroups.set(yearMonth, []);
+      }
+      monthGroups.get(yearMonth)!.push(t);
+    }
+
+    // Step 3: Calculate normalized rent for each month (skip months with < 3 transactions)
+    const trendPoints: MonthlyTrendPoint[] = [];
+    const sortedMonths = [...monthGroups.keys()].sort();
+
+    for (const yearMonth of sortedMonths) {
+      const monthTxs = monthGroups.get(yearMonth)!;
+
+      if (monthTxs.length < 3) {
+        // Skip months with insufficient data
+        continue;
+      }
+
+      // Calculate median deposit and rent for this month
+      const deposits = monthTxs.map(t => t.deposit).sort((a, b) => a - b);
+      const rents = monthTxs.map(t => t.monthlyRent).sort((a, b) => a - b);
+      const medianDeposit = deposits[Math.floor(deposits.length / 2)];
+      const medianRent = rents[Math.floor(rents.length / 2)];
+
+      // Estimate rent at reference deposit using linear interpolation
+      // Higher deposit = lower rent. Use simple linear model.
+      // Calculate slope using all transactions in this month
+      let normalizedRent = medianRent;
+
+      if (monthTxs.length >= 2 && medianDeposit !== referenceDeposit) {
+        // Linear regression: rent = intercept + slope * deposit
+        const n = monthTxs.length;
+        const sumX = monthTxs.reduce((s, t) => s + t.deposit, 0);
+        const sumY = monthTxs.reduce((s, t) => s + t.monthlyRent, 0);
+        const sumXY = monthTxs.reduce((s, t) => s + t.deposit * t.monthlyRent, 0);
+        const sumX2 = monthTxs.reduce((s, t) => s + t.deposit * t.deposit, 0);
+
+        const denominator = n * sumX2 - sumX * sumX;
+        if (Math.abs(denominator) > 1e-10) {
+          const slope = (n * sumXY - sumX * sumY) / denominator;
+          const intercept = (sumY - slope * sumX) / n;
+
+          // Predict rent at reference deposit
+          normalizedRent = intercept + slope * referenceDeposit;
+
+          // Ensure normalized rent is positive and reasonable
+          if (normalizedRent <= 0) {
+            normalizedRent = medianRent;
+          }
+        }
+      }
+
+      trendPoints.push({
+        yearMonth,
+        medianDeposit,
+        medianRent,
+        normalizedRent,
+        transactionCount: monthTxs.length
+      });
+    }
+
+    if (trendPoints.length === 0) {
+      return { trendPoints: [], referenceDeposit };
+    }
+
+    // Step 4: Apply 3-month moving average smoothing
+    for (let i = 0; i < trendPoints.length; i++) {
+      const windowStart = Math.max(0, i - 1);
+      const windowEnd = Math.min(trendPoints.length - 1, i + 1);
+
+      let sum = 0;
+      let count = 0;
+      for (let j = windowStart; j <= windowEnd; j++) {
+        sum += trendPoints[j].normalizedRent;
+        count++;
+      }
+      trendPoints[i].smoothedRent = sum / count;
+    }
+
+    return { trendPoints, referenceDeposit };
+  }
+
+  /**
+   * Apply time adjustment to transactions based on trend data
+   * Adjusts all rents to "today's market equivalent"
+   */
+  private applyTimeAdjustment(
+    transactions: WolseTransaction[],
+    trendPoints: MonthlyTrendPoint[]
+  ): TimeAdjustedTransaction[] {
+    if (trendPoints.length === 0) {
+      // No trend data - return transactions with no adjustment
+      return transactions.map(t => ({
+        ...t,
+        adjustedMonthlyRent: t.monthlyRent,
+        adjustmentFactor: 1.0
+      }));
+    }
+
+    // Get latest smoothed rent as reference
+    const latestPoint = trendPoints[trendPoints.length - 1];
+    const latestSmoothedRent = latestPoint.smoothedRent || latestPoint.normalizedRent;
+
+    // Create a map of adjustment factors by yearMonth
+    const adjustmentMap = new Map<string, number>();
+    for (const point of trendPoints) {
+      const pointRent = point.smoothedRent || point.normalizedRent;
+      // adjustment factor = latest / this month
+      // If market is rising, older months have lower rents, so factor > 1
+      const factor = pointRent > 0 ? latestSmoothedRent / pointRent : 1.0;
+      adjustmentMap.set(point.yearMonth, factor);
+    }
+
+    // Calculate average factor for months not in trend data
+    const avgFactor = trendPoints.length > 0
+      ? [...adjustmentMap.values()].reduce((s, f) => s + f, 0) / adjustmentMap.size
+      : 1.0;
+
+    // Apply adjustment to all transactions
+    return transactions.map(t => {
+      const yearMonth = `${t.year}${t.month.toString().padStart(2, '0')}`;
+      const factor = adjustmentMap.get(yearMonth) || avgFactor;
+
+      return {
+        ...t,
+        adjustedMonthlyRent: t.monthlyRent * factor,
+        adjustmentFactor: factor
+      };
+    });
+  }
+
+  /**
+   * Calculate conversion rate pairs with time adjustment
+   * This is the main method that combines building grouping + time adjustment
+   */
+  private calculateConversionRatePairsWithTimeAdjustment(
+    transactions: WolseTransaction[]
+  ): ConversionRatePair[] {
+    const pairs: ConversionRatePair[] = [];
+    const now = new Date();
+
+    // Group transactions by building name
+    const buildingGroups = new Map<string, WolseTransaction[]>();
+    for (const t of transactions) {
+      const key = t.apartmentName;
+      if (!buildingGroups.has(key)) {
+        buildingGroups.set(key, []);
+      }
+      buildingGroups.get(key)!.push(t);
+    }
+
+    // Track buildings with time adjustment
+    const buildingsWithAdjustment: string[] = [];
+    const buildingsSkipped: number = [...buildingGroups.values()].filter(txs => txs.length < 2).length;
+
+    // Process each building separately
+    for (const [buildingName, buildingTransactions] of buildingGroups) {
+      // Need at least 2 transactions to form pairs
+      if (buildingTransactions.length < 2) {
+        continue;
+      }
+
+      // Step 1: Calculate time adjustment factors for this building
+      const { trendPoints, referenceDeposit } = this.calculateTimeAdjustmentFactors(buildingTransactions);
+
+      if (trendPoints.length > 0) {
+        const factors = trendPoints.map(p => p.smoothedRent ? (trendPoints[trendPoints.length-1].smoothedRent! / p.smoothedRent).toFixed(2) : '1.00');
+        buildingsWithAdjustment.push(`${buildingName}(${factors.join('→')})`);
+      }
+
+      // Step 2: Apply time adjustment to all transactions in this building
+      const adjustedTxs = this.applyTimeAdjustment(buildingTransactions, trendPoints);
+
+      // Step 3: Calculate pairs using adjusted rents
+      for (let i = 0; i < adjustedTxs.length; i++) {
+        for (let j = i + 1; j < adjustedTxs.length; j++) {
+          const t1 = adjustedTxs[i];
+          const t2 = adjustedTxs[j];
+
+          // Skip if deposits are too similar (need meaningful difference)
+          const depositDiff = Math.abs(t1.deposit - t2.deposit);
+          if (depositDiff < 5000000) continue; // Need at least 5M won difference
+
+          // Skip if either has zero rent
+          if (t1.monthlyRent === 0 || t2.monthlyRent === 0) continue;
+
+          // Calculate implied rate using TIME-ADJUSTED rents
+          let impliedRate: number;
+          if (t1.deposit < t2.deposit) {
+            // t1 has lower deposit, should have higher rent
+            const rentDiff = t1.adjustedMonthlyRent - t2.adjustedMonthlyRent;
+            const depositDiffAmount = t2.deposit - t1.deposit;
+            impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
+          } else {
+            // t2 has lower deposit, should have higher rent
+            const rentDiff = t2.adjustedMonthlyRent - t1.adjustedMonthlyRent;
+            const depositDiffAmount = t1.deposit - t2.deposit;
+            impliedRate = (rentDiff * 12) / depositDiffAmount * 100;
+          }
+
+          // Filter out unrealistic rates
+          if (impliedRate < 0 || impliedRate > 15) continue;
+
+          // Calculate average days ago for weighting
+          const date1 = new Date(t1.year, t1.month - 1, t1.day);
+          const date2 = new Date(t2.year, t2.month - 1, t2.day);
+          const daysAgo1 = (now.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24);
+          const daysAgo2 = (now.getTime() - date2.getTime()) / (1000 * 60 * 60 * 24);
+          const avgDaysAgo = (daysAgo1 + daysAgo2) / 2;
+
+          // Time-based weight
+          const monthsAgo = avgDaysAgo / 30;
+          const weight = 1 / (1 + monthsAgo * 0.2);
+
+          pairs.push({
+            transaction1: t1,
+            transaction2: t2,
+            impliedRate,
+            daysAgo: avgDaysAgo,
+            weight
+          });
+        }
+      }
+    }
+
+    // Log summary
+    console.log(`\n   🏢 Time-adjusted: ${buildingGroups.size} buildings (${buildingsSkipped} skipped <2 txs)`);
+    if (buildingsWithAdjustment.length > 0) {
+      console.log(`      Adjusted: ${buildingsWithAdjustment.slice(0, 5).join(', ')}${buildingsWithAdjustment.length > 5 ? ` +${buildingsWithAdjustment.length - 5} more` : ''}`);
+    }
+
+    // Log rate distribution (concise)
+    if (pairs.length > 0) {
+      const rates = pairs.map(p => p.impliedRate).sort((a, b) => a - b);
+      const median = rates[Math.floor(rates.length / 2)];
+      console.log(`   📊 Rate pairs: ${pairs.length}, range ${rates[0].toFixed(2)}%~${rates[rates.length-1].toFixed(2)}%, median ${median.toFixed(2)}%`);
+    }
+
+    return pairs;
   }
 }

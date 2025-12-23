@@ -191,15 +191,13 @@ export class WolsePriceAnalyzer {
   }
 
   /**
-   * Compare user's rent against market expectation using regression-based approach
+   * Compare user's rent against market expectation using linear regression
    *
-   * New methodology:
+   * Methodology:
    * 1. Remove outliers from transactions
-   * 2. Calculate mean deposit and mean rent from clean data
-   * 3. Calculate expected rent at user's deposit using market rate
+   * 2. Fit linear regression: Rent = intercept + slope × Deposit
+   * 3. Predict expected rent at user's deposit
    * 4. Compare user's actual rent vs expected rent
-   *
-   * Formula: Expected_Rent = Mean_Rent + (Market_Rate/12/100) × (Mean_Deposit - User_Deposit)
    */
   private compareUserRentToMarket(
     quote: WolseQuote,
@@ -246,32 +244,25 @@ export class WolsePriceAnalyzer {
     }
 
     if (clean.length < 3) {
-      console.log('   ⚠️ Not enough clean transactions - using all data');
-      // Fall back to using all transactions if too few remain
-      const allMeanDeposit = transactions.reduce((sum, t) => sum + t.deposit, 0) / transactions.length;
+      console.log('   ⚠️ Not enough clean transactions - using all data with simple average');
       const allMeanRent = transactions.reduce((sum, t) => sum + t.monthlyRent, 0) / transactions.length;
-      const expectedRent = allMeanRent + (marketRate / 12 / 100) * (allMeanDeposit - quote.deposit);
-      const rentDiff = quote.monthlyRent - expectedRent;
+      const rentDiff = quote.monthlyRent - allMeanRent;
 
       return {
-        expectedRent: Math.round(expectedRent),
+        expectedRent: Math.round(allMeanRent),
         actualRent: quote.monthlyRent,
         rentDifference: Math.round(rentDiff),
-        rentDifferencePercent: expectedRent > 0 ? (rentDiff / expectedRent) * 100 : 0,
-        meanDeposit: allMeanDeposit,
+        rentDifferencePercent: allMeanRent > 0 ? (rentDiff / allMeanRent) * 100 : 0,
+        meanDeposit: transactions.reduce((sum, t) => sum + t.deposit, 0) / transactions.length,
         meanRent: allMeanRent,
         cleanTransactionCount: transactions.length,
         outliersRemoved: 0
       };
     }
 
-    // Step 2: Calculate mean point from clean transactions
+    // Step 2: Calculate statistics for reference
     const meanDeposit = clean.reduce((sum, t) => sum + t.deposit, 0) / clean.length;
     const meanRent = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / clean.length;
-
-    console.log(`\n   📊 CLEAN DATA STATISTICS:`);
-    console.log(`      Mean Deposit: ${(meanDeposit / 10000).toLocaleString()}만원`);
-    console.log(`      Mean Rent: ${(meanRent / 10000).toLocaleString()}만원`);
 
     // Log clean transactions for reference
     console.log('\n   📋 CLEAN TRANSACTIONS (sorted by deposit):');
@@ -280,20 +271,56 @@ export class WolsePriceAnalyzer {
       console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원`);
     });
 
-    // Step 3: Calculate expected rent at user's deposit
-    // Formula: Expected_Rent = Mean_Rent + (Rate/12/100) × (Mean_Deposit - User_Deposit)
-    const ratePerMonth = marketRate / 12 / 100;
-    const depositDiffFromMean = meanDeposit - quote.deposit;
-    const expectedRent = meanRent + ratePerMonth * depositDiffFromMean;
+    // Step 3: Linear regression to predict rent at user's deposit
+    // Rent = intercept + slope × Deposit
+    const n = clean.length;
+    const sumX = clean.reduce((sum, t) => sum + t.deposit, 0);
+    const sumY = clean.reduce((sum, t) => sum + t.monthlyRent, 0);
+    const sumXY = clean.reduce((sum, t) => sum + t.deposit * t.monthlyRent, 0);
+    const sumX2 = clean.reduce((sum, t) => sum + t.deposit * t.deposit, 0);
 
-    console.log(`\n   📐 EXPECTED RENT CALCULATION:`);
-    console.log('   ' + '-'.repeat(50));
-    console.log(`      Formula: Expected = Mean_Rent + (Rate/12/100) × (Mean_Deposit - User_Deposit)`);
-    console.log(`      Rate per month: ${marketRate}% / 12 / 100 = ${ratePerMonth.toFixed(8)}`);
-    console.log(`      Deposit diff from mean: ${(meanDeposit / 10000).toLocaleString()}만원 - ${(quote.deposit / 10000).toLocaleString()}만원 = ${(depositDiffFromMean / 10000).toLocaleString()}만원`);
-    console.log(`      Rent adjustment: ${ratePerMonth.toFixed(8)} × ${depositDiffFromMean.toLocaleString()} = ${(ratePerMonth * depositDiffFromMean).toLocaleString()}원`);
-    console.log(`      Expected Rent: ${(meanRent / 10000).toLocaleString()}만원 + ${((ratePerMonth * depositDiffFromMean) / 10000).toLocaleString()}만원 = ${(expectedRent / 10000).toLocaleString()}만원`);
-    console.log('   ' + '-'.repeat(50));
+    const denominator = n * sumX2 - sumX * sumX;
+    let expectedRent: number;
+    let slope = 0;
+    let intercept = 0;
+    let rSquared = 0;
+
+    if (Math.abs(denominator) < 1e-10) {
+      // Can't fit regression - use mean rent
+      console.log('\n   ⚠️ Cannot fit regression (no variance in deposits) - using mean rent');
+      expectedRent = meanRent;
+    } else {
+      slope = (n * sumXY - sumX * sumY) / denominator;
+      intercept = (sumY - slope * sumX) / n;
+      expectedRent = intercept + slope * quote.deposit;
+
+      // Calculate R-squared
+      const yMean = sumY / n;
+      const ssTotal = clean.reduce((sum, t) => sum + Math.pow(t.monthlyRent - yMean, 2), 0);
+      const ssResidual = clean.reduce((sum, t) => {
+        const predicted = intercept + slope * t.deposit;
+        return sum + Math.pow(t.monthlyRent - predicted, 2);
+      }, 0);
+      rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
+
+      console.log(`\n   📐 LINEAR REGRESSION:`);
+      console.log('   ' + '-'.repeat(50));
+      console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${(slope * 100000000).toFixed(2)}만원/1억) × Deposit`);
+      console.log(`      Slope: ${(slope * 100000000).toFixed(2)}만원 per 1억 deposit`);
+      console.log(`      Intercept: ${(intercept / 10000).toFixed(2)}만원 (rent at 0 deposit)`);
+      console.log(`      R²: ${(rSquared * 100).toFixed(1)}% (goodness of fit)`);
+      console.log('   ' + '-'.repeat(50));
+      console.log(`      At user's deposit (${(quote.deposit / 10000).toLocaleString()}만원):`);
+      console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${(slope * 100000000).toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
+      console.log(`                    = ${(expectedRent / 10000).toFixed(2)}만원`);
+      console.log('   ' + '-'.repeat(50));
+
+      // Sanity check: if expected rent is negative or unreasonably high, fall back
+      if (expectedRent < 0) {
+        console.log('   ⚠️ Regression produced negative rent - using mean rent');
+        expectedRent = meanRent;
+      }
+    }
 
     // Step 4: Compare user's actual rent vs expected rent
     const rentDifference = quote.monthlyRent - expectedRent;
