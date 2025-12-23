@@ -149,11 +149,14 @@ export class WolseRateCalculator {
     // Step 2: Fall back to dong-level if insufficient data
     if (transactions.length < 5) {
       console.log(`\n⚠️ Only ${transactions.length} building transactions. Expanding to dong level...`);
+      // Use 12 months and ±5% area tolerance for dong-level (stricter filtering, more data)
+      const dongMonthsBack = 12;
       const dongTransactions = await this.wolseAPI.getWolseForDong(
         lawdCd,
         dong,
         exclusiveArea,
-        monthsBack
+        dongMonthsBack,
+        0.05  // ±5% area tolerance (stricter than default ±10%)
       );
       transactions = dongTransactions;
       dataSource = 'dong';

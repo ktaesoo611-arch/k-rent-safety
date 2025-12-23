@@ -157,10 +157,12 @@ export class MolitWolseAPI {
     lawdCd: string,
     dong: string,
     area?: number,
-    monthsBack: number = 6
+    monthsBack: number = 6,
+    areaToleranceRatio: number = 0.1  // Default ±10%, can be set to 0.05 for ±5%
   ): Promise<WolseTransaction[]> {
     console.log(`\n🏘️ MOLIT Wolse API - Dong-level Query:`);
     console.log(`   lawdCd: "${lawdCd}", dong: "${dong}"`);
+    console.log(`   Period: ${monthsBack} months, Area tolerance: ±${(areaToleranceRatio * 100).toFixed(0)}%`);
 
     const transactions: WolseTransaction[] = [];
     const today = new Date();
@@ -182,7 +184,7 @@ export class MolitWolseAPI {
           if (!dongMatches) return false;
 
           if (area !== undefined) {
-            const areaTolerance = area * 0.1;
+            const areaTolerance = area * areaToleranceRatio;
             return Math.abs(t.exclusiveArea - area) <= areaTolerance;
           }
           return true;
