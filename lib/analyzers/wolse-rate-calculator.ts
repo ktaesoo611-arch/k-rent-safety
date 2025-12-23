@@ -337,6 +337,48 @@ export class WolseRateCalculator {
       }
     }
 
+    // Log rate distribution for examination
+    if (pairs.length > 0) {
+      const rates = pairs.map(p => p.impliedRate).sort((a, b) => a - b);
+      const buckets = {
+        '0-2%': 0, '2-4%': 0, '4-6%': 0, '6-8%': 0, '8-10%': 0, '10-15%': 0
+      };
+      rates.forEach(r => {
+        if (r < 2) buckets['0-2%']++;
+        else if (r < 4) buckets['2-4%']++;
+        else if (r < 6) buckets['4-6%']++;
+        else if (r < 8) buckets['6-8%']++;
+        else if (r < 10) buckets['8-10%']++;
+        else buckets['10-15%']++;
+      });
+
+      console.log('\n   📊 RATE PAIR DISTRIBUTION:');
+      console.log(`      Total pairs: ${pairs.length}`);
+      console.log(`      Rate range: ${rates[0].toFixed(2)}% ~ ${rates[rates.length-1].toFixed(2)}%`);
+      console.log(`      Median: ${rates[Math.floor(rates.length/2)].toFixed(2)}%`);
+      console.log('      Distribution:');
+      Object.entries(buckets).forEach(([range, count]) => {
+        const bar = '█'.repeat(Math.ceil(count / pairs.length * 30));
+        console.log(`         ${range}: ${count} (${(count/pairs.length*100).toFixed(0)}%) ${bar}`);
+      });
+
+      // Show some sample pairs at extremes
+      console.log('      Lowest 3 rates:');
+      rates.slice(0, 3).forEach((r, i) => {
+        const p = pairs.find(p => p.impliedRate === r);
+        if (p) {
+          console.log(`         ${r.toFixed(2)}%: ${(p.transaction1.deposit/10000).toFixed(0)}만/${(p.transaction1.monthlyRent/10000).toFixed(0)}만 vs ${(p.transaction2.deposit/10000).toFixed(0)}만/${(p.transaction2.monthlyRent/10000).toFixed(0)}만`);
+        }
+      });
+      console.log('      Highest 3 rates:');
+      rates.slice(-3).forEach((r, i) => {
+        const p = pairs.find(p => p.impliedRate === r);
+        if (p) {
+          console.log(`         ${r.toFixed(2)}%: ${(p.transaction1.deposit/10000).toFixed(0)}만/${(p.transaction1.monthlyRent/10000).toFixed(0)}만 vs ${(p.transaction2.deposit/10000).toFixed(0)}만/${(p.transaction2.monthlyRent/10000).toFixed(0)}만`);
+        }
+      });
+    }
+
     return pairs;
   }
 
