@@ -492,14 +492,22 @@ export class WolseRateCalculator {
     const lastRate = slope * maxDaysAgo + intercept; // Rate at x=maxDaysAgo (newest)
     const percentageChange = firstRate > 0 ? ((lastRate - firstRate) / firstRate) * 100 : 0;
 
-    // Determine direction with thresholds based on R-squared
-    let threshold = rSquared > 0.5 ? 5 : 10; // Higher R² = more sensitive threshold
-
+    // Determine direction with tiered thresholds
+    // Large changes override low R² (noisy data can still show meaningful trends)
     let direction: 'RISING' | 'STABLE' | 'DECLINING';
-    if (percentageChange > threshold && rSquared > 0.2) {
-      direction = 'RISING';
-    } else if (percentageChange < -threshold && rSquared > 0.2) {
-      direction = 'DECLINING';
+
+    const absChange = Math.abs(percentageChange);
+
+    // Tier 1: Very large change (>15%) - trust regardless of R²
+    // Tier 2: Large change (>10%) - need minimal R² (0.1)
+    // Tier 3: Moderate change (>5%) - need reasonable R² (0.3)
+    const isSignificantTrend =
+      absChange > 15 ||
+      (absChange > 10 && rSquared > 0.1) ||
+      (absChange > 5 && rSquared > 0.3);
+
+    if (isSignificantTrend) {
+      direction = percentageChange > 0 ? 'RISING' : 'DECLINING';
     } else {
       direction = 'STABLE';
     }
