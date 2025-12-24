@@ -568,12 +568,13 @@ export default function LandingPageV4() {
             <div className="text-white/40 text-sm uppercase tracking-wider mb-4">Contact</div>
             <div className="flex flex-wrap gap-6 text-white/70">
               <p>ktaesoo611@gmail.com</p>
+              <p>010-2382-8432</p>
             </div>
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between gap-4 text-white/40 text-sm">
             <div>
-              <p>K-Rent Safety | Representative: Kim Tae-soo</p>
+              <p>Jeonse Safety Research | Representative: Kim Tae-soo</p>
               <p>Business Registration: 595-47-01161</p>
             </div>
             <div className="md:text-right">
