@@ -153,7 +153,7 @@ export function WolseResultsDisplay({ result, onNewAnalysis }: WolseResultsDispl
 
       {/* Market Rate Info */}
       <div className="bg-white rounded-3xl p-6 shadow-xl shadow-amber-900/5 border border-amber-100">
-        <div className="grid md:grid-cols-3 gap-6 text-center">
+        <div className="grid md:grid-cols-3 gap-6 text-center mb-6">
           <div>
             <p className="text-sm text-[#718096] mb-1">Market Rate</p>
             <p className="text-xl font-bold text-[#1A202C]">{result.marketRate.toFixed(2)}%</p>
@@ -171,6 +171,27 @@ export function WolseResultsDisplay({ result, onNewAnalysis }: WolseResultsDispl
               {result.dataSourceNote || `${result.cleanTransactionCount || result.contractCount} transactions`}
               {result.outliersRemoved ? ` (${result.outliersRemoved} outliers removed)` : ''}
             </p>
+          </div>
+        </div>
+
+        {/* Explanation for foreigners */}
+        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+          <h4 className="text-sm font-semibold text-amber-800 mb-2">What do these rates mean?</h4>
+          <div className="space-y-2 text-sm text-[#4A5568]">
+            <p>
+              <strong className="text-[#1A202C]">Market Rate ({result.marketRate.toFixed(1)}%)</strong>:
+              The actual conversion rate used in recent contracts in this area. This is what landlords typically charge.
+            </p>
+            <p>
+              <strong className="text-[#1A202C]">Legal Maximum ({result.legalRate.toFixed(1)}%)</strong>:
+              The government-set cap for lease renewals. When renewing your lease, you can request deposit-to-rent conversions at this rate.
+            </p>
+            {result.marketRate > result.legalRate && (
+              <p className="text-amber-700 bg-amber-100 rounded-lg p-2 mt-2">
+                <strong>Tip:</strong> Market rate is above legal cap. For new contracts, expect market rates.
+                For renewals, you have the right to request the legal rate ({result.legalRate.toFixed(1)}%).
+              </p>
+            )}
           </div>
         </div>
       </div>
