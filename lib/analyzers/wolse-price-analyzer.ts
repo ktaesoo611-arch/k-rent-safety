@@ -443,41 +443,49 @@ export class WolsePriceAnalyzer {
       return `${amount.toLocaleString()}원`;
     };
 
-    // Assessment based on how much user pays vs expected
-    if (rentDifferencePercent <= -10) {
-      // Paying 10%+ less than expected
+    // Hybrid Assessment: Uses BOTH percentage AND absolute thresholds
+    // This ensures consistency across different rent levels
+    // - Low rent (e.g., 60만): small absolute differences don't trigger overpriced
+    // - High rent (e.g., 500만): small percentage differences don't trigger overpriced
+
+    const MIN_OVERPRICED_AMOUNT = 100000;      // 10만원
+    const MIN_SEVERELY_OVERPRICED_AMOUNT = 200000;  // 20만원
+    const MIN_GOOD_DEAL_SAVINGS = 150000;      // 15만원
+
+    // GOOD_DEAL: Saving ≥10% OR saving ≥15만원
+    if (rentDifferencePercent <= -10 || rentDifference <= -MIN_GOOD_DEAL_SAVINGS) {
       return {
         level: 'GOOD_DEAL',
         details: `Great find! You're paying ${formatWon(Math.abs(rentDifference))}/month less than the market expectation of ${formatWon(expectedRent)}. Consider locking in this rate with a longer lease and negotiating other terms like repairs or appliances.`
       };
     }
 
-    if (rentDifferencePercent <= 5) {
-      // Within ±5% of expected - fair deal
-      if (rentDifference <= 0) {
-        return {
-          level: 'FAIR',
-          details: `Your rent of ${formatWon(actualRent)} is at or below the market expectation of ${formatWon(expectedRent)}. Focus on negotiating contract terms (lease length, repairs, deposit payment schedule) rather than price.`
-        };
-      }
+    // SEVERELY_OVERPRICED: >15% AND >20만원
+    if (rentDifferencePercent > 15 && rentDifference > MIN_SEVERELY_OVERPRICED_AMOUNT) {
       return {
-        level: 'FAIR',
-        details: `Your rent of ${formatWon(actualRent)} is close to the market expectation of ${formatWon(expectedRent)} (+${formatWon(rentDifference)}). Minor room for negotiation exists.`
+        level: 'SEVERELY_OVERPRICED',
+        details: `You're paying ${formatWon(rentDifference)}/month more than expected (${formatWon(expectedRent)}). At ${rentDifferencePercent.toFixed(0)}% above market, strong negotiation is recommended.`
       };
     }
 
-    if (rentDifferencePercent <= 15) {
-      // 5-15% above expected
+    // OVERPRICED: >5% AND >10만원
+    if (rentDifferencePercent > 5 && rentDifference > MIN_OVERPRICED_AMOUNT) {
       return {
         level: 'OVERPRICED',
         details: `You're paying ${formatWon(rentDifference)}/month more than the market expectation of ${formatWon(expectedRent)}. This is ${rentDifferencePercent.toFixed(0)}% above market. Room for negotiation.`
       };
     }
 
-    // More than 15% above expected
+    // FAIR: Everything else (within tolerance)
+    if (rentDifference <= 0) {
+      return {
+        level: 'FAIR',
+        details: `Your rent of ${formatWon(actualRent)} is at or below the market expectation of ${formatWon(expectedRent)}. Focus on negotiating contract terms (lease length, repairs, deposit payment schedule) rather than price.`
+      };
+    }
     return {
-      level: 'SEVERELY_OVERPRICED',
-      details: `You're paying ${formatWon(rentDifference)}/month more than expected (${formatWon(expectedRent)}). At ${rentDifferencePercent.toFixed(0)}% above market, strong negotiation is recommended.`
+      level: 'FAIR',
+      details: `Your rent of ${formatWon(actualRent)} is close to the market expectation of ${formatWon(expectedRent)} (+${formatWon(rentDifference)}). Minor room for negotiation exists.`
     };
   }
 
