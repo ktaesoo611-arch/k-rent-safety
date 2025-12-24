@@ -567,8 +567,7 @@ export default function LandingPageV4() {
           <div className="pb-8 border-b border-white/10 mb-8">
             <div className="text-white/40 text-sm uppercase tracking-wider mb-4">Contact</div>
             <div className="flex flex-wrap gap-6 text-white/70">
-              <p>contact@jeonse-safety.com</p>
-              <p>010-2382-8432</p>
+              <p>ktaesoo611@gmail.com</p>
             </div>
           </div>
 

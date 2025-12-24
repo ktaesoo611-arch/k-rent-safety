@@ -1,4 +1,4 @@
-import { WolseRateCalculator, MarketRateResult } from './wolse-rate-calculator';
+import { WolseRateCalculator, MarketRateResult, TimeAdjustedTransaction } from './wolse-rate-calculator';
 import {
   WolseQuote,
   WolseAnalysisResult,
@@ -110,12 +110,13 @@ export class WolsePriceAnalyzer {
       exclusiveArea
     );
 
-    // Step 2: Compare user's rent to market expectation (NEW METHODOLOGY)
+    // Step 2: Compare user's rent to market expectation (NEW METHODOLOGY with time adjustment)
     const rentComparison = this.compareUserRentToMarket(
       quote,
       marketData.transactions,
       marketData.marketRate,
-      marketData.dataSource
+      marketData.dataSource,
+      marketData.timeAdjustedTransactions
     );
 
     // Step 3: Derive user's implied rate for backwards compatibility
@@ -195,7 +196,7 @@ export class WolsePriceAnalyzer {
    *
    * Methodology:
    * 1. Remove outliers from transactions
-   * 2. Fit linear regression: Rent = intercept + slope × Deposit
+   * 2. Fit Theil-Sen median regression using TIME-ADJUSTED rents
    * 3. Predict expected rent at user's deposit
    * 4. Compare user's actual rent vs expected rent
    */
@@ -203,7 +204,8 @@ export class WolsePriceAnalyzer {
     quote: WolseQuote,
     transactions: WolseTransaction[],
     marketRate: number,
-    dataSource: 'building' | 'dong' | 'district' = 'building'
+    dataSource: 'building' | 'dong' | 'district' = 'building',
+    timeAdjustedTransactions?: TimeAdjustedTransaction[]
   ): UserRentComparison {
     console.log('\n' + '='.repeat(60));
     console.log('📊 COMPARING USER RENT TO MARKET EXPECTATION');
@@ -264,14 +266,41 @@ export class WolsePriceAnalyzer {
     const meanDeposit = clean.reduce((sum, t) => sum + t.deposit, 0) / clean.length;
     const meanRent = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / clean.length;
 
+    // Determine which rent values to use: time-adjusted if available
+    const useTimeAdjusted = timeAdjustedTransactions && timeAdjustedTransactions.length > 0;
+
     // Log clean transactions for reference
-    console.log('\n   📋 CLEAN TRANSACTIONS (sorted by deposit):');
+    console.log(`\n   📋 CLEAN TRANSACTIONS (sorted by deposit)${useTimeAdjusted ? ' [TIME-ADJUSTED]' : ''}:`);
     const sortedClean = [...clean].sort((a, b) => a.deposit - b.deposit);
+
+    // Create a map from deposit+date to time-adjusted rent for lookup
+    const timeAdjustedMap = new Map<string, { adjustedRent: number; factor: number }>();
+    if (useTimeAdjusted) {
+      for (const t of timeAdjustedTransactions!) {
+        const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
+        timeAdjustedMap.set(key, { adjustedRent: t.adjustedMonthlyRent, factor: t.adjustmentFactor });
+      }
+    }
+
+    // Helper to get the rent to use for regression (adjusted or raw)
+    const getRentForRegression = (t: WolseTransaction): number => {
+      if (!useTimeAdjusted) return t.monthlyRent;
+      const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
+      const adjusted = timeAdjustedMap.get(key);
+      return adjusted ? adjusted.adjustedRent : t.monthlyRent;
+    };
+
     sortedClean.forEach((t, idx) => {
-      console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원`);
+      const adjustedRent = getRentForRegression(t);
+      const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
+      const adjusted = timeAdjustedMap.get(key);
+      const factorStr = adjusted && adjusted.factor !== 1.0 ? ` (×${adjusted.factor.toFixed(2)})` : '';
+      const adjustedStr = useTimeAdjusted ? ` → ${(adjustedRent / 10000).toLocaleString()}만원${factorStr}` : '';
+      console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원${adjustedStr}`);
     });
 
     // Step 3: Theil-Sen median regression (robust to outliers)
+    // Uses TIME-ADJUSTED rents when available
     // 1. Calculate slopes between all pairs of points
     // 2. Take median of all slopes
     // 3. Calculate intercept using median
@@ -280,17 +309,22 @@ export class WolsePriceAnalyzer {
     let slope = 0;
     let intercept = 0;
 
+    // Calculate mean rent using time-adjusted values
+    const adjustedMeanRent = useTimeAdjusted
+      ? clean.reduce((sum, t) => sum + getRentForRegression(t), 0) / clean.length
+      : meanRent;
+
     if (n < 2) {
       console.log('\n   ⚠️ Not enough points for regression - using mean rent');
-      expectedRent = meanRent;
+      expectedRent = adjustedMeanRent;
     } else {
-      // Calculate all pairwise slopes
+      // Calculate all pairwise slopes using time-adjusted rents
       const slopes: number[] = [];
       for (let i = 0; i < n; i++) {
         for (let j = i + 1; j < n; j++) {
           const dx = clean[j].deposit - clean[i].deposit;
           if (Math.abs(dx) > 1000000) { // At least 100만원 difference
-            const dy = clean[j].monthlyRent - clean[i].monthlyRent;
+            const dy = getRentForRegression(clean[j]) - getRentForRegression(clean[i]);
             slopes.push(dy / dx);
           }
         }
@@ -298,32 +332,32 @@ export class WolsePriceAnalyzer {
 
       if (slopes.length === 0) {
         console.log('\n   ⚠️ Cannot calculate slopes - using mean rent');
-        expectedRent = meanRent;
+        expectedRent = adjustedMeanRent;
       } else {
         // Median slope
         slopes.sort((a, b) => a - b);
         slope = slopes[Math.floor(slopes.length / 2)];
 
-        // Calculate intercepts for all points and take median
-        const intercepts = clean.map(t => t.monthlyRent - slope * t.deposit);
+        // Calculate intercepts for all points and take median (using time-adjusted rents)
+        const intercepts = clean.map(t => getRentForRegression(t) - slope * t.deposit);
         intercepts.sort((a, b) => a - b);
         intercept = intercepts[Math.floor(intercepts.length / 2)];
 
         expectedRent = intercept + slope * quote.deposit;
 
-        // Calculate R-squared for reference
-        const yMean = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / n;
-        const ssTotal = clean.reduce((sum, t) => sum + Math.pow(t.monthlyRent - yMean, 2), 0);
+        // Calculate R-squared for reference (using time-adjusted rents)
+        const yMean = clean.reduce((sum, t) => sum + getRentForRegression(t), 0) / n;
+        const ssTotal = clean.reduce((sum, t) => sum + Math.pow(getRentForRegression(t) - yMean, 2), 0);
         const ssResidual = clean.reduce((sum, t) => {
           const predicted = intercept + slope * t.deposit;
-          return sum + Math.pow(t.monthlyRent - predicted, 2);
+          return sum + Math.pow(getRentForRegression(t) - predicted, 2);
         }, 0);
         const rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
 
         // Slope in 만원 per 1억 deposit: slope (원/원) × 1억 / 1만 = slope × 10000
         const slopePerEok = slope * 10000;
 
-        console.log(`\n   📐 MEDIAN REGRESSION (Theil-Sen, robust to outliers):`);
+        console.log(`\n   📐 MEDIAN REGRESSION (Theil-Sen${useTimeAdjusted ? ', TIME-ADJUSTED' : ''}, robust to outliers):`);
         console.log('   ' + '-'.repeat(50));
         console.log(`      Pairwise slopes calculated: ${slopes.length}`);
         console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${slopePerEok.toFixed(2)}만원/1억) × Deposit`);

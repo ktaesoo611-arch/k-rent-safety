@@ -17,8 +17,8 @@ export interface ConversionRatePair {
   weight: number;
 }
 
-// Extended transaction with time-adjusted rent
-interface TimeAdjustedTransaction extends WolseTransaction {
+// Extended transaction with time-adjusted rent (exported for use in price analyzer)
+export interface TimeAdjustedTransaction extends WolseTransaction {
   adjustedMonthlyRent: number;
   adjustmentFactor: number;
 }
@@ -51,6 +51,7 @@ export interface MarketRateResult {
   };
   legalRate: number;
   transactions: WolseTransaction[];
+  timeAdjustedTransactions?: TimeAdjustedTransaction[];
 }
 
 /**
@@ -224,7 +225,7 @@ export class WolseRateCalculator {
 
     // Step 5: Calculate implied conversion rates from transaction pairs (using clean transactions)
     // Use time-adjusted method for both building and dong level data
-    const ratePairs = this.calculateConversionRatePairsWithTimeAdjustment(cleanTransactions);
+    const { pairs: ratePairs, timeAdjustedTransactions } = this.calculateConversionRatePairsWithTimeAdjustment(cleanTransactions);
     console.log(`\n📈 Calculated ${ratePairs.length} valid rate pairs (time-adjusted)`);
 
     if (ratePairs.length === 0) {
@@ -248,7 +249,8 @@ export class WolseRateCalculator {
           rSquared: 0
         },
         legalRate: LEGAL_CAP,
-        transactions: cleanTransactions
+        transactions: cleanTransactions,
+        timeAdjustedTransactions
       };
     }
 
@@ -279,7 +281,8 @@ export class WolseRateCalculator {
       validPairCount: ratePairs.length,
       trend,
       legalRate: LEGAL_CAP,
-      transactions: cleanTransactions
+      transactions: cleanTransactions,
+      timeAdjustedTransactions
     };
   }
 
@@ -688,11 +691,13 @@ export class WolseRateCalculator {
   /**
    * Calculate conversion rate pairs with time adjustment
    * This is the main method that combines building grouping + time adjustment
+   * Returns both pairs and the time-adjusted transactions for use in expected rent calculation
    */
   private calculateConversionRatePairsWithTimeAdjustment(
     transactions: WolseTransaction[]
-  ): ConversionRatePair[] {
+  ): { pairs: ConversionRatePair[]; timeAdjustedTransactions: TimeAdjustedTransaction[] } {
     const pairs: ConversionRatePair[] = [];
+    const allAdjustedTxs: TimeAdjustedTransaction[] = [];
     const now = new Date();
 
     // Group transactions by building name
@@ -726,6 +731,9 @@ export class WolseRateCalculator {
 
       // Step 2: Apply time adjustment to all transactions in this building
       const adjustedTxs = this.applyTimeAdjustment(buildingTransactions, trendPoints);
+
+      // Collect all adjusted transactions for expected rent calculation
+      allAdjustedTxs.push(...adjustedTxs);
 
       // Step 3: Calculate pairs using adjusted rents
       for (let i = 0; i < adjustedTxs.length; i++) {
@@ -792,6 +800,6 @@ export class WolseRateCalculator {
       console.log(`   📊 Rate pairs: ${pairs.length}, range ${rates[0].toFixed(2)}%~${rates[rates.length-1].toFixed(2)}%, median ${median.toFixed(2)}%`);
     }
 
-    return pairs;
+    return { pairs, timeAdjustedTransactions: allAdjustedTxs };
   }
 }
