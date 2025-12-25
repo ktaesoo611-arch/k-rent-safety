@@ -9,16 +9,6 @@ import { WolseTransaction, WolseMarketRate } from '../types';
 const CURRENT_BOK_RATE = 2.5;
 const LEGAL_CAP = Math.min(10, CURRENT_BOK_RATE + 2); // = 4.5%
 
-/**
- * Keywords to identify 임대주택 (public/rental housing)
- * These are typically priced 70-80% below market rate
- */
-const PUBLIC_HOUSING_KEYWORDS = [
-  '임대', 'LH', 'SH', '행복주택', '국민임대', '공공임대',
-  '영구임대', '장기전세', '매입임대', '분납임대', '10년임대',
-  '5년임대', '공공분양', '보금자리', '휴먼시아'
-];
-
 export interface ConversionRatePair {
   transaction1: WolseTransaction;
   transaction2: WolseTransaction;
@@ -138,23 +128,22 @@ export class WolseRateCalculator {
   }
 
   /**
-   * Filter out transactions that should not be included in market analysis:
-   * 1. Renewal contracts (갱신) - limited to 5% increase under law, not representative of market
-   * 2. Public housing (임대주택) - typically 70-80% below market rate
+   * Filter out renewal contracts (갱신) from transactions
    *
-   * @returns Object with filtered transactions and counts of removed items
+   * Renewal contracts are limited to 5% increase under Korean law,
+   * so they don't represent true market rates. This also naturally
+   * excludes most 임대주택 since tenants tend to renew due to low prices.
+   *
+   * @returns Object with filtered transactions and renewal count
    */
-  private filterNonMarketTransactions(
+  private filterRenewalContracts(
     transactions: WolseTransaction[]
   ): {
     filtered: WolseTransaction[];
     renewalCount: number;
-    publicHousingCount: number;
     renewalTransactions: WolseTransaction[];
-    publicHousingTransactions: WolseTransaction[];
   } {
     const renewalTransactions: WolseTransaction[] = [];
-    const publicHousingTransactions: WolseTransaction[] = [];
     const filtered: WolseTransaction[] = [];
 
     for (const t of transactions) {
@@ -162,27 +151,15 @@ export class WolseRateCalculator {
       // contractType can be '신규', '갱신', or undefined (old data without this field)
       if (t.contractType === '갱신') {
         renewalTransactions.push(t);
-        continue;
+      } else {
+        filtered.push(t);
       }
-
-      // Check for public housing (임대주택)
-      const isPublicHousing = PUBLIC_HOUSING_KEYWORDS.some(keyword =>
-        t.apartmentName.toUpperCase().includes(keyword.toUpperCase())
-      );
-      if (isPublicHousing) {
-        publicHousingTransactions.push(t);
-        continue;
-      }
-
-      filtered.push(t);
     }
 
     return {
       filtered,
       renewalCount: renewalTransactions.length,
-      publicHousingCount: publicHousingTransactions.length,
-      renewalTransactions,
-      publicHousingTransactions
+      renewalTransactions
     };
   }
 
@@ -235,27 +212,18 @@ export class WolseRateCalculator {
       confidenceLevel = 'LOW';
     }
 
-    // Step 2.5: Filter out non-market transactions (renewals and public housing)
+    // Step 2.5: Filter out renewal contracts (갱신)
+    // Renewals are capped at 5% increase and don't represent market rates
+    // This also naturally excludes most 임대주택 since tenants tend to renew
     const originalCount = transactions.length;
-    const filterResult = this.filterNonMarketTransactions(transactions);
+    const filterResult = this.filterRenewalContracts(transactions);
     transactions = filterResult.filtered;
 
-    if (filterResult.renewalCount > 0 || filterResult.publicHousingCount > 0) {
-      console.log(`\n🔍 NON-MARKET TRANSACTION FILTER:`);
+    if (filterResult.renewalCount > 0) {
+      console.log(`\n🔍 RENEWAL CONTRACT FILTER:`);
       console.log(`   Original: ${originalCount} transactions`);
-      if (filterResult.renewalCount > 0) {
-        console.log(`   🔄 Renewal contracts (갱신) removed: ${filterResult.renewalCount}`);
-        filterResult.renewalTransactions.forEach(t => {
-          console.log(`      - ${t.year}.${t.month}.${t.day} | ${t.apartmentName} | ${(t.deposit/10000).toLocaleString()}만/${(t.monthlyRent/10000).toLocaleString()}만`);
-        });
-      }
-      if (filterResult.publicHousingCount > 0) {
-        console.log(`   🏠 Public housing (임대주택) removed: ${filterResult.publicHousingCount}`);
-        filterResult.publicHousingTransactions.forEach(t => {
-          console.log(`      - ${t.year}.${t.month}.${t.day} | ${t.apartmentName} | ${(t.deposit/10000).toLocaleString()}만/${(t.monthlyRent/10000).toLocaleString()}만`);
-        });
-      }
-      console.log(`   Remaining: ${transactions.length} new contracts from regular housing`);
+      console.log(`   🔄 Renewals (갱신) removed: ${filterResult.renewalCount}`);
+      console.log(`   ✅ New contracts (신규) kept: ${transactions.length}`);
     }
 
     // Step 3: Check if we have sufficient data
