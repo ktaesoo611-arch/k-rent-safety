@@ -2,14 +2,48 @@
  * Haptic Feedback System
  *
  * Provides various vibration patterns for different interactions.
- * Uses the Web Vibration API (supported on Android Chrome, iOS Safari 16.4+)
+ * Uses the Web Vibration API (Android only - iOS does not support it).
+ * Falls back to visual feedback on unsupported devices.
  */
 
 /**
  * Check if haptic feedback is supported
+ * Note: Only works on Android. iOS Safari does NOT support Vibration API.
  */
 export const isHapticSupported = (): boolean => {
   return typeof window !== 'undefined' && 'vibrate' in navigator;
+};
+
+/**
+ * Visual feedback for devices without haptic support (iOS, desktop)
+ * Creates a brief scale + opacity pulse on the element
+ */
+export const triggerVisualFeedback = (
+  element?: HTMLElement | null,
+  intensity: 'light' | 'medium' | 'heavy' = 'medium'
+): void => {
+  if (typeof document === 'undefined') return;
+
+  const target = element || (document.activeElement as HTMLElement);
+  if (!target || target === document.body) return;
+
+  // Save original transform
+  const originalTransform = target.style.transform;
+  const originalTransition = target.style.transition;
+
+  // Apply visual feedback based on intensity
+  const scale = intensity === 'light' ? 0.98 : intensity === 'medium' ? 0.96 : 0.94;
+
+  target.style.transition = 'transform 75ms ease-out';
+  target.style.transform = `scale(${scale})`;
+
+  // Restore after animation
+  setTimeout(() => {
+    target.style.transform = originalTransform || '';
+    setTimeout(() => {
+      target.style.transition = originalTransition || '';
+    }, 75);
+  }, 75);
 };
 
 /**

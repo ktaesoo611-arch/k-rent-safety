@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { haptic, haptics, isHapticSupported, HapticPattern } from '@/lib/utils/haptics';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { haptic, haptics, isHapticSupported, triggerVisualFeedback, HapticPattern } from '@/lib/utils/haptics';
 
 interface UseHapticOptions {
   /** Disable haptics for this hook instance */
   disabled?: boolean;
   /** Force haptic even if user prefers reduced motion */
   force?: boolean;
+  /** Enable visual feedback fallback for unsupported devices (default: true) */
+  visualFallback?: boolean;
 }
 
 interface UseHapticReturn {
@@ -15,23 +17,23 @@ interface UseHapticReturn {
   isSupported: boolean;
   /** Whether haptic feedback is enabled (supported and not disabled) */
   isEnabled: boolean;
-  /** Trigger haptic with specified pattern */
-  trigger: (pattern?: HapticPattern) => void;
+  /** Trigger haptic with specified pattern, optionally pass element for visual fallback */
+  trigger: (pattern?: HapticPattern, element?: HTMLElement | null) => void;
   /** Convenience methods for common patterns */
-  light: () => void;
-  medium: () => void;
-  heavy: () => void;
-  success: () => void;
-  error: () => void;
-  warning: () => void;
-  selection: () => void;
-  menu: () => void;
-  navigation: () => void;
-  focus: () => void;
-  submit: () => void;
-  notification: () => void;
-  tick: () => void;
-  impact: () => void;
+  light: (element?: HTMLElement | null) => void;
+  medium: (element?: HTMLElement | null) => void;
+  heavy: (element?: HTMLElement | null) => void;
+  success: (element?: HTMLElement | null) => void;
+  error: (element?: HTMLElement | null) => void;
+  warning: (element?: HTMLElement | null) => void;
+  selection: (element?: HTMLElement | null) => void;
+  menu: (element?: HTMLElement | null) => void;
+  navigation: (element?: HTMLElement | null) => void;
+  focus: (element?: HTMLElement | null) => void;
+  submit: (element?: HTMLElement | null) => void;
+  notification: (element?: HTMLElement | null) => void;
+  tick: (element?: HTMLElement | null) => void;
+  impact: (element?: HTMLElement | null) => void;
   /** Stop any ongoing vibration */
   stop: () => void;
 }
@@ -60,7 +62,7 @@ interface UseHapticReturn {
  * ```
  */
 export function useHaptic(options: UseHapticOptions = {}): UseHapticReturn {
-  const { disabled = false, force = false } = options;
+  const { disabled = false, force = false, visualFallback = true } = options;
   const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
@@ -69,40 +71,53 @@ export function useHaptic(options: UseHapticOptions = {}): UseHapticReturn {
 
   const isEnabled = isSupported && !disabled;
 
+  // Map haptic patterns to visual intensity
+  const getVisualIntensity = (pattern: HapticPattern): 'light' | 'medium' | 'heavy' => {
+    if (['light', 'selection', 'tick', 'focus'].includes(pattern)) return 'light';
+    if (['heavy', 'error', 'impact', 'warning'].includes(pattern)) return 'heavy';
+    return 'medium';
+  };
+
   const trigger = useCallback(
-    (pattern: HapticPattern = 'medium') => {
-      if (!isEnabled) return;
-      haptic(pattern, { force });
+    (pattern: HapticPattern = 'medium', element?: HTMLElement | null) => {
+      if (disabled) return;
+
+      if (isSupported) {
+        haptic(pattern, { force });
+      } else if (visualFallback) {
+        // Use visual feedback on unsupported devices (iOS)
+        triggerVisualFeedback(element, getVisualIntensity(pattern));
+      }
     },
-    [isEnabled, force]
+    [isSupported, disabled, force, visualFallback]
   );
 
-  const createTrigger = useCallback(
-    (pattern: HapticPattern) => () => {
-      if (!isEnabled) return;
-      haptic(pattern, { force });
+  // Helper to create pattern-specific triggers
+  const createPatternTrigger = useCallback(
+    (pattern: HapticPattern) => (element?: HTMLElement | null) => {
+      trigger(pattern, element);
     },
-    [isEnabled, force]
+    [trigger]
   );
 
   return {
     isSupported,
     isEnabled,
     trigger,
-    light: useCallback(() => trigger('light'), [trigger]),
-    medium: useCallback(() => trigger('medium'), [trigger]),
-    heavy: useCallback(() => trigger('heavy'), [trigger]),
-    success: useCallback(() => trigger('success'), [trigger]),
-    error: useCallback(() => trigger('error'), [trigger]),
-    warning: useCallback(() => trigger('warning'), [trigger]),
-    selection: useCallback(() => trigger('selection'), [trigger]),
-    menu: useCallback(() => trigger('menu'), [trigger]),
-    navigation: useCallback(() => trigger('navigation'), [trigger]),
-    focus: useCallback(() => trigger('focus'), [trigger]),
-    submit: useCallback(() => trigger('submit'), [trigger]),
-    notification: useCallback(() => trigger('notification'), [trigger]),
-    tick: useCallback(() => trigger('tick'), [trigger]),
-    impact: useCallback(() => trigger('impact'), [trigger]),
+    light: useCallback((el?: HTMLElement | null) => trigger('light', el), [trigger]),
+    medium: useCallback((el?: HTMLElement | null) => trigger('medium', el), [trigger]),
+    heavy: useCallback((el?: HTMLElement | null) => trigger('heavy', el), [trigger]),
+    success: useCallback((el?: HTMLElement | null) => trigger('success', el), [trigger]),
+    error: useCallback((el?: HTMLElement | null) => trigger('error', el), [trigger]),
+    warning: useCallback((el?: HTMLElement | null) => trigger('warning', el), [trigger]),
+    selection: useCallback((el?: HTMLElement | null) => trigger('selection', el), [trigger]),
+    menu: useCallback((el?: HTMLElement | null) => trigger('menu', el), [trigger]),
+    navigation: useCallback((el?: HTMLElement | null) => trigger('navigation', el), [trigger]),
+    focus: useCallback((el?: HTMLElement | null) => trigger('focus', el), [trigger]),
+    submit: useCallback((el?: HTMLElement | null) => trigger('submit', el), [trigger]),
+    notification: useCallback((el?: HTMLElement | null) => trigger('notification', el), [trigger]),
+    tick: useCallback((el?: HTMLElement | null) => trigger('tick', el), [trigger]),
+    impact: useCallback((el?: HTMLElement | null) => trigger('impact', el), [trigger]),
     stop: haptics.stop,
   };
 }

@@ -159,8 +159,8 @@ export default function LandingPageV4() {
 
           {/* Mobile Menu Button */}
           <button
-            onClick={() => {
-              haptic.menu();
+            onClick={(e) => {
+              haptic.menu(e.currentTarget);
               setMobileMenuOpen(!mobileMenuOpen);
             }}
             className="md:hidden relative w-10 h-10 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors flex items-center justify-center"
@@ -192,8 +192,8 @@ export default function LandingPageV4() {
               <Link
                 href="/analyze"
                 className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all mb-2 group"
-                onClick={() => {
-                  haptic.navigation();
+                onClick={(e) => {
+                  haptic.navigation(e.currentTarget);
                   setMobileMenuOpen(false);
                 }}
               >
@@ -210,8 +210,8 @@ export default function LandingPageV4() {
               <Link
                 href="/analyze/wolse"
                 className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all group"
-                onClick={() => {
-                  haptic.navigation();
+                onClick={(e) => {
+                  haptic.navigation(e.currentTarget);
                   setMobileMenuOpen(false);
                 }}
               >
@@ -236,8 +236,8 @@ export default function LandingPageV4() {
                 <Link
                   href="/dashboard"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => {
-                    haptic.navigation();
+                  onClick={(e) => {
+                    haptic.navigation(e.currentTarget);
                     setMobileMenuOpen(false);
                   }}
                 >
@@ -246,16 +246,16 @@ export default function LandingPageV4() {
                 <Link
                   href="/profile"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => {
-                    haptic.navigation();
+                  onClick={(e) => {
+                    haptic.navigation(e.currentTarget);
                     setMobileMenuOpen(false);
                   }}
                 >
                   Profile
                 </Link>
                 <button
-                  onClick={() => {
-                    haptic.medium();
+                  onClick={(e) => {
+                    haptic.medium(e.currentTarget);
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
@@ -271,8 +271,8 @@ export default function LandingPageV4() {
                 <Link
                   href="/auth/login"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => {
-                    haptic.navigation();
+                  onClick={(e) => {
+                    haptic.navigation(e.currentTarget);
                     setMobileMenuOpen(false);
                   }}
                 >
@@ -281,8 +281,8 @@ export default function LandingPageV4() {
                 <Link
                   href="/auth/signup"
                   className="block bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:shadow-amber-200/50 px-6 py-3.5 rounded-xl text-sm font-semibold text-center transition-all"
-                  onClick={() => {
-                    haptic.medium();
+                  onClick={(e) => {
+                    haptic.medium(e.currentTarget);
                     setMobileMenuOpen(false);
                   }}
                 >
