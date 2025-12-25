@@ -45,7 +45,7 @@ export interface MarketRateResult {
   outliersRemoved: number;
   validPairCount: number;
   trend: {
-    direction: 'RISING' | 'STABLE' | 'DECLINING';
+    direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
     percentage: number;
     pValue: number;  // Mann-Kendall p-value (lower = more significant trend)
     slopePerMonth: number;  // Theil-Sen slope in 만원/month
@@ -799,7 +799,7 @@ export class WolseRateCalculator {
     transactions: WolseTransaction[],
     marketRate: number
   ): {
-    direction: 'RISING' | 'STABLE' | 'DECLINING';
+    direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
     percentage: number;
     pValue: number;
     slopePerMonth: number;
@@ -857,13 +857,16 @@ export class WolseRateCalculator {
 /**
  * Mann-Kendall Trend Test
  * Non-parametric test for monotonic trends in time series data
- * Uses p-value < 0.05 for statistical significance
+ * Two-tier significance levels:
+ *   p < 0.05: Confident trend (RISING/DECLINING)
+ *   p < 0.10: Likely trend (LIKELY_RISING/LIKELY_DECLINING)
+ *   p >= 0.10: No significant trend (STABLE)
  */
 function mannKendallTest(data: { x: number; y: number }[]): {
   S: number;
   Z: number;
   pValue: number;
-  trend: 'RISING' | 'DECLINING' | 'STABLE';
+  trend: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
 } {
   const sorted = [...data].sort((a, b) => a.x - b.x);
   const n = sorted.length;
@@ -894,11 +897,18 @@ function mannKendallTest(data: { x: number; y: number }[]): {
   // Calculate two-tailed p-value
   const pValue = 2 * (1 - normalCDF(Math.abs(Z)));
 
-  // Determine trend based on statistical significance (alpha = 0.05)
-  const significant = pValue < 0.05;
-  const trend: 'RISING' | 'DECLINING' | 'STABLE' = significant
-    ? (S > 0 ? 'RISING' : 'DECLINING')
-    : 'STABLE';
+  // Determine trend based on two-tier significance levels
+  let trend: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
+  if (pValue < 0.05) {
+    // Confident trend (p < 0.05)
+    trend = S > 0 ? 'RISING' : 'DECLINING';
+  } else if (pValue < 0.10) {
+    // Likely trend (0.05 <= p < 0.10)
+    trend = S > 0 ? 'LIKELY_RISING' : 'LIKELY_DECLINING';
+  } else {
+    // No significant trend (p >= 0.10)
+    trend = 'STABLE';
+  }
 
   return { S, Z, pValue, trend };
 }

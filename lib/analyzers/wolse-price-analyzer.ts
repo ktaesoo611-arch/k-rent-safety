@@ -210,7 +210,7 @@ export class WolsePriceAnalyzer {
     marketRate: number,
     dataSource: 'building' | 'dong' | 'district' = 'building',
     timeAdjustedTransactions?: TimeAdjustedTransaction[],
-    trend?: { direction: 'RISING' | 'STABLE' | 'DECLINING'; slopePerMonth: number; pValue: number }
+    trend?: { direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING'; slopePerMonth: number; pValue: number }
   ): UserRentComparison {
     console.log('\n' + '='.repeat(60));
     console.log('📊 COMPARING USER RENT TO MARKET EXPECTATION');
@@ -527,7 +527,7 @@ export class WolsePriceAnalyzer {
    * Generate trend-based advice
    * Note: Trend is calculated from Full Monthly Cost (rent + deposit × rate / 12)
    */
-  private generateTrendAdvice(trend: { direction: 'RISING' | 'STABLE' | 'DECLINING'; percentage: number }): string {
+  private generateTrendAdvice(trend: { direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING'; percentage: number }): string {
     switch (trend.direction) {
       case 'DECLINING':
         if (trend.percentage > 15) {
@@ -535,11 +535,17 @@ export class WolsePriceAnalyzer {
         }
         return `Rental prices are trending down (-${trend.percentage.toFixed(0)}%). Good time to negotiate or consider waiting for better prices.`;
 
+      case 'LIKELY_DECLINING':
+        return `Rental prices appear to be declining (-${trend.percentage.toFixed(0)}%). Market may favor tenants - consider negotiating.`;
+
       case 'RISING':
         if (trend.percentage > 15) {
           return `Rental prices are rising rapidly (+${trend.percentage.toFixed(0)}% over the past year). Consider securing a contract sooner if the price is reasonable.`;
         }
         return `Rental prices are trending up (+${trend.percentage.toFixed(0)}%). Moderate urgency to finalize if you find a fair deal.`;
+
+      case 'LIKELY_RISING':
+        return `Rental prices appear to be rising (+${trend.percentage.toFixed(0)}%). Market may be heating up - consider not delaying too long if the price is fair.`;
 
       case 'STABLE':
       default:

@@ -65,7 +65,7 @@ export class WolseCacheService {
         rate75thPercentile: data.rate_75th_percentile,
         confidenceLevel: data.confidence_level as 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT',
         contractCount: data.contract_count,
-        trendDirection: data.trend_direction as 'RISING' | 'STABLE' | 'DECLINING',
+        trendDirection: data.trend_direction as 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING',
         trendPercentage: data.trend_percentage,
         calculatedAt: data.calculated_at,
         expiresAt: data.expires_at
@@ -91,7 +91,7 @@ export class WolseCacheService {
       confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
       contractCount: number;
       trend: {
-        direction: 'RISING' | 'STABLE' | 'DECLINING';
+        direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
         percentage: number;
       };
     }
@@ -241,7 +241,7 @@ export class WolseCacheService {
           vsLegal: data.savings_vs_legal
         },
         trend: {
-          direction: data.trend_direction as 'RISING' | 'STABLE' | 'DECLINING',
+          direction: data.trend_direction as 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING',
           percentage: data.trend_percentage,
           advice: data.trend_advice
         },

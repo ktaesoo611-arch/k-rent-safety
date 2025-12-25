@@ -285,7 +285,7 @@ export interface WolseMarketRate {
   rate75thPercentile: number;
   confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
   contractCount: number;
-  trendDirection: 'RISING' | 'STABLE' | 'DECLINING';
+  trendDirection: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
   trendPercentage: number;
   calculatedAt: string;
   expiresAt: string;
@@ -354,7 +354,7 @@ export interface WolseAnalysisResult {
 
   // Trend
   trend: {
-    direction: 'RISING' | 'STABLE' | 'DECLINING';
+    direction: 'RISING' | 'LIKELY_RISING' | 'STABLE' | 'LIKELY_DECLINING' | 'DECLINING';
     percentage: number;
     advice: string;
   };
