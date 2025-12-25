@@ -54,7 +54,7 @@ export class MolitWolseAPI {
         year: parseInt(item.dealYear),
         month: parseInt(item.dealMonth),
         day: parseInt(item.dealDay),
-        contractType: item.cdealType?.trim() || undefined // 신규/갱신
+        contractType: item.contractType?.trim() || undefined // 신규/갱신
       }));
     } catch (error) {
       console.error('MOLIT Wolse API Error:', error);
