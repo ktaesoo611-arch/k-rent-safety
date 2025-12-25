@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useScrollAnimation } from '@/lib/hooks/useScrollAnimation';
+import { useHaptic } from '@/lib/hooks/useHaptic';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -16,6 +17,9 @@ export default function LandingPageV4() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Haptic feedback
+  const haptic = useHaptic();
 
   const servicesSection = useScrollAnimation({ threshold: 0.2 });
   const aboutSection = useScrollAnimation({ threshold: 0.2 });
@@ -155,7 +159,10 @@ export default function LandingPageV4() {
 
           {/* Mobile Menu Button */}
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => {
+              haptic.menu();
+              setMobileMenuOpen(!mobileMenuOpen);
+            }}
             className="md:hidden relative w-10 h-10 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors flex items-center justify-center"
             aria-label="Toggle menu"
           >
@@ -185,7 +192,10 @@ export default function LandingPageV4() {
               <Link
                 href="/analyze"
                 className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all mb-2 group"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  haptic.navigation();
+                  setMobileMenuOpen(false);
+                }}
               >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-200 group-hover:scale-105 transition-transform">
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,7 +210,10 @@ export default function LandingPageV4() {
               <Link
                 href="/analyze/wolse"
                 className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all group"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  haptic.navigation();
+                  setMobileMenuOpen(false);
+                }}
               >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-md shadow-orange-200 group-hover:scale-105 transition-transform">
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,19 +236,26 @@ export default function LandingPageV4() {
                 <Link
                   href="/dashboard"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.navigation();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/profile"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.navigation();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Profile
                 </Link>
                 <button
                   onClick={() => {
+                    haptic.medium();
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
@@ -251,14 +271,20 @@ export default function LandingPageV4() {
                 <Link
                   href="/auth/login"
                   className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.navigation();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Log In
                 </Link>
                 <Link
                   href="/auth/signup"
                   className="block bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:shadow-amber-200/50 px-6 py-3.5 rounded-xl text-sm font-semibold text-center transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.medium();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Sign Up Free
                 </Link>

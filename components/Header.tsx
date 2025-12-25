@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useHaptic } from '@/lib/hooks/useHaptic';
 import type { User } from '@supabase/supabase-js';
 
 export default function Header() {
@@ -14,6 +15,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const haptic = useHaptic();
 
   useEffect(() => {
     // Get initial user
@@ -248,7 +250,10 @@ export default function Header() {
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => {
+                haptic.menu();
+                setMobileMenuOpen(!mobileMenuOpen);
+              }}
               className="md:hidden relative w-10 h-10 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors flex items-center justify-center group"
               aria-label="Toggle menu"
             >
@@ -282,7 +287,10 @@ export default function Header() {
                 <Link
                   href="/analyze"
                   className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all mb-2 group"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.navigation();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-200 group-hover:scale-105 transition-transform">
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -297,7 +305,10 @@ export default function Header() {
                 <Link
                   href="/analyze/wolse"
                   className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all group"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    haptic.navigation();
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-md shadow-orange-200 group-hover:scale-105 transition-transform">
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,6 +332,7 @@ export default function Header() {
                   </MobileNavLink>
                   <button
                     onClick={() => {
+                      haptic.medium();
                       handleLogout();
                       setMobileMenuOpen(false);
                     }}
@@ -340,7 +352,10 @@ export default function Header() {
                       <Link
                         href="/auth/signup"
                         className="block bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:shadow-amber-200/50 px-6 py-3.5 rounded-xl text-sm font-semibold text-center transition-all"
-                        onClick={() => setMobileMenuOpen(false)}
+                        onClick={() => {
+                          haptic.medium();
+                          setMobileMenuOpen(false);
+                        }}
                       >
                         Sign Up Free
                       </Link>
@@ -394,6 +409,8 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
 
 // Mobile Nav Link Component
 function MobileNavLink({ href, children, onClick, active }: { href: string; children: React.ReactNode; onClick: () => void; active: boolean }) {
+  const haptic = useHaptic();
+
   return (
     <Link
       href={href}
@@ -404,7 +421,10 @@ function MobileNavLink({ href, children, onClick, active }: { href: string; chil
           : 'text-[#4A5568] hover:text-amber-700 hover:bg-amber-50'
         }
       `}
-      onClick={onClick}
+      onClick={() => {
+        haptic.navigation();
+        onClick();
+      }}
     >
       {children}
     </Link>
