@@ -15,6 +15,7 @@ export default function LandingPageV4() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const servicesSection = useScrollAnimation({ threshold: 0.2 });
   const aboutSection = useScrollAnimation({ threshold: 0.2 });
@@ -149,6 +150,119 @@ export default function LandingPageV4() {
                   </button>
                 </Link>
               </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden relative w-10 h-10 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors flex items-center justify-center"
+            aria-label="Toggle menu"
+          >
+            <div className="w-5 h-4 flex flex-col justify-between">
+              <span className={`w-full h-0.5 bg-amber-600 rounded-full transition-all duration-300 origin-center ${mobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+              <span className={`w-full h-0.5 bg-amber-600 rounded-full transition-all duration-300 ${mobileMenuOpen ? 'opacity-0 scale-0' : ''}`} />
+              <span className={`w-full h-0.5 bg-amber-600 rounded-full transition-all duration-300 origin-center ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+            </div>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <div
+          className={`
+            md:hidden overflow-hidden transition-all duration-500 ease-out
+            ${mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
+          `}
+        >
+          <div className="border-t border-amber-100 py-4 px-6 space-y-2 bg-[#FDFBF7]/95 backdrop-blur-md">
+            {/* Services Section */}
+            <div className="py-3 bg-amber-50/50 rounded-2xl px-4">
+              <div className="text-xs text-amber-700 uppercase tracking-wider font-semibold mb-3 flex items-center gap-2">
+                <span className="w-4 h-px bg-amber-300" />
+                Services
+                <span className="flex-1 h-px bg-amber-300" />
+              </div>
+              <Link
+                href="/analyze"
+                className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all mb-2 group"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-200 group-hover:scale-105 transition-transform">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-[#1A202C] text-sm">Jeonse Safety Check</div>
+                  <div className="text-xs text-[#718096]">Deposit safety analysis</div>
+                </div>
+              </Link>
+              <Link
+                href="/analyze/wolse"
+                className="flex items-center gap-3 px-3 py-3 hover:bg-white rounded-xl transition-all group"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-md shadow-orange-200 group-hover:scale-105 transition-transform">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-[#1A202C] text-sm flex items-center gap-2">
+                    Wolse Price Check
+                    <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded">FREE</span>
+                  </div>
+                  <div className="text-xs text-[#718096]">Monthly rent verification</div>
+                </div>
+              </Link>
+            </div>
+
+            {/* Auth Links */}
+            {!authLoading && user && (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/profile"
+                  className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left text-red-600 hover:bg-red-50 px-6 py-3 rounded-xl text-sm font-medium transition-all"
+                >
+                  Log Out
+                </button>
+              </>
+            )}
+
+            {!authLoading && !user && (
+              <div className="pt-2 space-y-2">
+                <Link
+                  href="/auth/login"
+                  className="block px-6 py-3 rounded-xl text-sm font-medium text-[#4A5568] hover:text-amber-700 hover:bg-amber-50 transition-all"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="block bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:shadow-amber-200/50 px-6 py-3.5 rounded-xl text-sm font-semibold text-center transition-all"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign Up Free
+                </Link>
+              </div>
             )}
           </div>
         </div>
