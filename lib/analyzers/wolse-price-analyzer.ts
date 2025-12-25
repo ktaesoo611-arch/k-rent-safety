@@ -110,13 +110,14 @@ export class WolsePriceAnalyzer {
       exclusiveArea
     );
 
-    // Step 2: Compare user's rent to market expectation (NEW METHODOLOGY with time adjustment)
+    // Step 2: Compare user's rent to market expectation (Option B: Raw Regression + MK Adjustment)
     const rentComparison = this.compareUserRentToMarket(
       quote,
       marketData.transactions,
       marketData.marketRate,
       marketData.dataSource,
-      marketData.timeAdjustedTransactions
+      marketData.timeAdjustedTransactions,
+      marketData.trend  // Pass trend for MK adjustment
     );
 
     // Step 3: Derive user's implied rate for backwards compatibility
@@ -194,10 +195,13 @@ export class WolsePriceAnalyzer {
   /**
    * Compare user's rent against market expectation using linear regression
    *
-   * Methodology:
+   * Methodology (Option B: Raw Regression + Mann-Kendall Adjustment):
    * 1. Remove outliers from transactions
-   * 2. Fit Theil-Sen median regression using TIME-ADJUSTED rents
-   * 3. Predict expected rent at user's deposit
+   * 2. Fit Theil-Sen median regression using RAW rents (no time adjustment)
+   *    - This gives "midpoint" expected rent (represents ~6 months ago)
+   * 3. Apply Mann-Kendall trend adjustment to bring to "today"
+   *    - If trend is RISING/DECLINING, add (slopePerMonth × 6)
+   *    - If trend is STABLE, no adjustment
    * 4. Compare user's actual rent vs expected rent
    */
   private compareUserRentToMarket(
@@ -205,7 +209,8 @@ export class WolsePriceAnalyzer {
     transactions: WolseTransaction[],
     marketRate: number,
     dataSource: 'building' | 'dong' | 'district' = 'building',
-    timeAdjustedTransactions?: TimeAdjustedTransaction[]
+    timeAdjustedTransactions?: TimeAdjustedTransaction[],
+    trend?: { direction: 'RISING' | 'STABLE' | 'DECLINING'; slopePerMonth: number; pValue: number }
   ): UserRentComparison {
     console.log('\n' + '='.repeat(60));
     console.log('📊 COMPARING USER RENT TO MARKET EXPECTATION');
@@ -266,65 +271,38 @@ export class WolsePriceAnalyzer {
     const meanDeposit = clean.reduce((sum, t) => sum + t.deposit, 0) / clean.length;
     const meanRent = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / clean.length;
 
-    // Determine which rent values to use: time-adjusted if available
-    const useTimeAdjusted = timeAdjustedTransactions && timeAdjustedTransactions.length > 0;
+    // Option B: Use RAW rents for regression (no time adjustment)
+    // Time adjustment is applied after regression via Mann-Kendall slope
 
     // Log clean transactions for reference
-    console.log(`\n   📋 CLEAN TRANSACTIONS (sorted by deposit)${useTimeAdjusted ? ' [TIME-ADJUSTED]' : ''}:`);
+    console.log(`\n   📋 CLEAN TRANSACTIONS (sorted by deposit) [RAW - Option B]:`);
     const sortedClean = [...clean].sort((a, b) => a.deposit - b.deposit);
 
-    // Create a map from deposit+date to time-adjusted rent for lookup
-    const timeAdjustedMap = new Map<string, { adjustedRent: number; factor: number }>();
-    if (useTimeAdjusted) {
-      for (const t of timeAdjustedTransactions!) {
-        const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
-        timeAdjustedMap.set(key, { adjustedRent: t.adjustedMonthlyRent, factor: t.adjustmentFactor });
-      }
-    }
-
-    // Helper to get the rent to use for regression (adjusted or raw)
-    const getRentForRegression = (t: WolseTransaction): number => {
-      if (!useTimeAdjusted) return t.monthlyRent;
-      const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
-      const adjusted = timeAdjustedMap.get(key);
-      return adjusted ? adjusted.adjustedRent : t.monthlyRent;
-    };
-
     sortedClean.forEach((t, idx) => {
-      const adjustedRent = getRentForRegression(t);
-      const key = `${t.deposit}-${t.year}-${t.month}-${t.day}-${t.apartmentName}`;
-      const adjusted = timeAdjustedMap.get(key);
-      const factorStr = adjusted && adjusted.factor !== 1.0 ? ` (×${adjusted.factor.toFixed(2)})` : '';
-      const adjustedStr = useTimeAdjusted ? ` → ${(adjustedRent / 10000).toLocaleString()}만원${factorStr}` : '';
-      console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원${adjustedStr}`);
+      console.log(`      ${idx + 1}. ${t.year}.${t.month}.${t.day} | ${(t.deposit / 10000).toLocaleString()}만원 / ${(t.monthlyRent / 10000).toLocaleString()}만원`);
     });
 
-    // Step 3: Theil-Sen median regression (robust to outliers)
-    // Uses TIME-ADJUSTED rents when available
+    // Step 3: Theil-Sen median regression on RAW rents (Option B)
     // 1. Calculate slopes between all pairs of points
     // 2. Take median of all slopes
     // 3. Calculate intercept using median
+    // 4. This gives "midpoint" expected rent (represents ~6 months ago)
     const n = clean.length;
-    let expectedRent: number;
+    let midpointExpectedRent: number;
     let slope = 0;
     let intercept = 0;
 
-    // Calculate mean rent using time-adjusted values
-    const adjustedMeanRent = useTimeAdjusted
-      ? clean.reduce((sum, t) => sum + getRentForRegression(t), 0) / clean.length
-      : meanRent;
-
     if (n < 2) {
       console.log('\n   ⚠️ Not enough points for regression - using mean rent');
-      expectedRent = adjustedMeanRent;
+      midpointExpectedRent = meanRent;
     } else {
-      // Calculate all pairwise slopes using time-adjusted rents
+      // Calculate all pairwise slopes using RAW rents
       const slopes: number[] = [];
       for (let i = 0; i < n; i++) {
         for (let j = i + 1; j < n; j++) {
           const dx = clean[j].deposit - clean[i].deposit;
           if (Math.abs(dx) > 1000000) { // At least 100만원 difference
-            const dy = getRentForRegression(clean[j]) - getRentForRegression(clean[i]);
+            const dy = clean[j].monthlyRent - clean[i].monthlyRent;
             slopes.push(dy / dx);
           }
         }
@@ -332,32 +310,32 @@ export class WolsePriceAnalyzer {
 
       if (slopes.length === 0) {
         console.log('\n   ⚠️ Cannot calculate slopes - using mean rent');
-        expectedRent = adjustedMeanRent;
+        midpointExpectedRent = meanRent;
       } else {
         // Median slope
         slopes.sort((a, b) => a - b);
         slope = slopes[Math.floor(slopes.length / 2)];
 
-        // Calculate intercepts for all points and take median (using time-adjusted rents)
-        const intercepts = clean.map(t => getRentForRegression(t) - slope * t.deposit);
+        // Calculate intercepts for all points and take median (using RAW rents)
+        const intercepts = clean.map(t => t.monthlyRent - slope * t.deposit);
         intercepts.sort((a, b) => a - b);
         intercept = intercepts[Math.floor(intercepts.length / 2)];
 
-        expectedRent = intercept + slope * quote.deposit;
+        midpointExpectedRent = intercept + slope * quote.deposit;
 
-        // Calculate R-squared for reference (using time-adjusted rents)
-        const yMean = clean.reduce((sum, t) => sum + getRentForRegression(t), 0) / n;
-        const ssTotal = clean.reduce((sum, t) => sum + Math.pow(getRentForRegression(t) - yMean, 2), 0);
+        // Calculate R-squared for reference
+        const yMean = clean.reduce((sum, t) => sum + t.monthlyRent, 0) / n;
+        const ssTotal = clean.reduce((sum, t) => sum + Math.pow(t.monthlyRent - yMean, 2), 0);
         const ssResidual = clean.reduce((sum, t) => {
           const predicted = intercept + slope * t.deposit;
-          return sum + Math.pow(getRentForRegression(t) - predicted, 2);
+          return sum + Math.pow(t.monthlyRent - predicted, 2);
         }, 0);
         const rSquared = ssTotal > 0 ? Math.max(0, 1 - ssResidual / ssTotal) : 0;
 
         // Slope in 만원 per 1억 deposit: slope (원/원) × 1억 / 1만 = slope × 10000
         const slopePerEok = slope * 10000;
 
-        console.log(`\n   📐 MEDIAN REGRESSION (Theil-Sen${useTimeAdjusted ? ', TIME-ADJUSTED' : ''}, robust to outliers):`);
+        console.log(`\n   📐 STEP 1: RAW REGRESSION (Theil-Sen, Option B):`);
         console.log('   ' + '-'.repeat(50));
         console.log(`      Pairwise slopes calculated: ${slopes.length}`);
         console.log(`      Formula: Rent = ${(intercept / 10000).toFixed(2)}만원 + (${slopePerEok.toFixed(2)}만원/1억) × Deposit`);
@@ -366,16 +344,39 @@ export class WolsePriceAnalyzer {
         console.log(`      R²: ${(rSquared * 100).toFixed(1)}% (goodness of fit)`);
         console.log('   ' + '-'.repeat(50));
         console.log(`      At user's deposit (${(quote.deposit / 10000).toLocaleString()}만원):`);
-        console.log(`      Expected Rent = ${(intercept / 10000).toFixed(2)} + (${slopePerEok.toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
-        console.log(`                    = ${(expectedRent / 10000).toFixed(2)}만원`);
+        console.log(`      Midpoint Rent = ${(intercept / 10000).toFixed(2)} + (${slopePerEok.toFixed(2)} × ${(quote.deposit / 100000000).toFixed(2)})`);
+        console.log(`                    = ${(midpointExpectedRent / 10000).toFixed(2)}만원 (represents ~6 months ago)`);
         console.log('   ' + '-'.repeat(50));
 
         // Sanity check: if expected rent is negative, fall back
-        if (expectedRent < 0) {
+        if (midpointExpectedRent < 0) {
           console.log('   ⚠️ Regression produced negative rent - using mean rent');
-          expectedRent = meanRent;
+          midpointExpectedRent = meanRent;
         }
       }
+    }
+
+    // Step 4: Apply Mann-Kendall trend adjustment (Option B)
+    // Bring midpoint expected rent to "today" by adding trend slope × 6 months
+    const MONTHS_FORWARD = 6; // Midpoint to today
+    let expectedRent = midpointExpectedRent;
+    let trendAdjustment = 0;
+
+    if (trend && trend.direction !== 'STABLE') {
+      // slopePerMonth is in 만원/month, convert to 원
+      trendAdjustment = trend.slopePerMonth * MONTHS_FORWARD * 10000;
+      expectedRent = midpointExpectedRent + trendAdjustment;
+
+      console.log(`\n   📈 STEP 2: MANN-KENDALL TREND ADJUSTMENT:`);
+      console.log('   ' + '-'.repeat(50));
+      console.log(`      Trend: ${trend.direction} (p=${trend.pValue.toFixed(4)})`);
+      console.log(`      Slope: ${trend.slopePerMonth.toFixed(2)}만원/month`);
+      console.log(`      Adjustment: ${trend.slopePerMonth.toFixed(2)} × ${MONTHS_FORWARD} months = ${(trendAdjustment / 10000).toFixed(1)}만원`);
+      console.log(`      Expected Rent (today) = ${(midpointExpectedRent / 10000).toFixed(1)} + ${(trendAdjustment / 10000).toFixed(1)} = ${(expectedRent / 10000).toFixed(1)}만원`);
+      console.log('   ' + '-'.repeat(50));
+    } else {
+      console.log(`\n   📈 STEP 2: TREND ADJUSTMENT: None (trend is STABLE)`);
+      console.log(`      Expected Rent = ${(expectedRent / 10000).toFixed(1)}만원`);
     }
 
     // Step 4: Compare user's actual rent vs expected rent
@@ -524,24 +525,25 @@ export class WolsePriceAnalyzer {
 
   /**
    * Generate trend-based advice
+   * Note: Trend is calculated from Full Monthly Cost (rent + deposit × rate / 12)
    */
   private generateTrendAdvice(trend: { direction: 'RISING' | 'STABLE' | 'DECLINING'; percentage: number }): string {
     switch (trend.direction) {
       case 'DECLINING':
         if (trend.percentage > 15) {
-          return `Market rates are declining significantly (-${trend.percentage.toFixed(0)}% over 6 months). Strong negotiation position - landlords have less pricing power.`;
+          return `Rental prices are declining significantly (-${trend.percentage.toFixed(0)}% over the past year). Strong negotiation position - landlords have less pricing power.`;
         }
-        return `Market rates are trending down (-${trend.percentage.toFixed(0)}%). Good time to negotiate or consider waiting for better rates.`;
+        return `Rental prices are trending down (-${trend.percentage.toFixed(0)}%). Good time to negotiate or consider waiting for better prices.`;
 
       case 'RISING':
         if (trend.percentage > 15) {
-          return `Market rates are rising rapidly (+${trend.percentage.toFixed(0)}% over 6 months). Consider securing a contract sooner if the price is reasonable.`;
+          return `Rental prices are rising rapidly (+${trend.percentage.toFixed(0)}% over the past year). Consider securing a contract sooner if the price is reasonable.`;
         }
-        return `Market rates are trending up (+${trend.percentage.toFixed(0)}%). Moderate urgency to finalize if you find a fair deal.`;
+        return `Rental prices are trending up (+${trend.percentage.toFixed(0)}%). Moderate urgency to finalize if you find a fair deal.`;
 
       case 'STABLE':
       default:
-        return `Market rates are stable. Take your time to find the best deal and negotiate confidently.`;
+        return `Rental prices are stable. Take your time to find the best deal and negotiate confidently.`;
     }
   }
 
