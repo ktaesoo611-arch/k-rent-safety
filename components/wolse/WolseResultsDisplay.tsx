@@ -223,15 +223,15 @@ export function WolseResultsDisplay({ result, onNewAnalysis }: WolseResultsDispl
         </div>
       )}
 
-      {/* Market Trend */}
+      {/* Price Trend */}
       <div className="bg-white rounded-3xl p-6 shadow-xl shadow-amber-900/5 border border-amber-100">
         <h3 className="text-lg font-bold text-[#1A202C] mb-4 flex items-center gap-2">
-          <span>{getTrendIcon(result.trend.direction)}</span> Market Trend
+          <span>{getTrendIcon(result.trend.direction)}</span> Price Trend
         </h3>
         <p className="text-[#4A5568] leading-relaxed">{result.trend.advice}</p>
         <div className="mt-4 flex items-center gap-4 text-sm text-[#718096]">
           <span>Direction: <strong className="text-[#1A202C]">{result.trend.direction}</strong></span>
-          <span>Change: <strong className="text-[#1A202C]">{result.trend.percentage.toFixed(1)}%</strong> over 6 months</span>
+          <span>Change: <strong className="text-[#1A202C]">{result.trend.percentage.toFixed(1)}%</strong> over 12 months</span>
         </div>
       </div>
 

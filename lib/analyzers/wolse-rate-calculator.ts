@@ -47,11 +47,13 @@ export interface MarketRateResult {
   trend: {
     direction: 'RISING' | 'STABLE' | 'DECLINING';
     percentage: number;
-    rSquared: number;
+    pValue: number;  // Mann-Kendall p-value (lower = more significant trend)
+    slopePerMonth: number;  // Theil-Sen slope in 만원/month
   };
   legalRate: number;
   transactions: WolseTransaction[];
   timeAdjustedTransactions?: TimeAdjustedTransaction[];
+  ratePairs?: Array<{ x: number; y: number }>; // For trend analysis testing
 }
 
 /**
@@ -134,7 +136,7 @@ export class WolseRateCalculator {
     dong: string,
     apartmentName: string,
     exclusiveArea: number,
-    monthsBack: number = 6
+    monthsBack: number = 12  // 12 months for better Mann-Kendall trend detection
   ): Promise<MarketRateResult> {
     const lawdCd = getDistrictCode(city, district);
     if (!lawdCd) {
@@ -191,7 +193,8 @@ export class WolseRateCalculator {
         trend: {
           direction: 'STABLE',
           percentage: 0,
-          rSquared: 0
+          pValue: 1,
+          slopePerMonth: 0
         },
         legalRate: LEGAL_CAP,
         transactions
@@ -232,6 +235,8 @@ export class WolseRateCalculator {
       // Can't calculate market rate from pairs - use baseline method
       console.log('⚠️ No valid pairs. Using baseline calculation method.');
       const baselineRate = this.calculateBaselineRate(cleanTransactions);
+      // Still calculate trend using Mann-Kendall even without valid pairs
+      const fallbackTrend = this.calculateTrendWithMannKendall(cleanTransactions, baselineRate || LEGAL_CAP);
       return {
         marketRate: baselineRate || LEGAL_CAP,
         rate25thPercentile: baselineRate || LEGAL_CAP,
@@ -243,11 +248,7 @@ export class WolseRateCalculator {
         cleanTransactionCount: cleanTransactions.length,
         outliersRemoved,
         validPairCount: 0,
-        trend: {
-          direction: 'STABLE',
-          percentage: 0,
-          rSquared: 0
-        },
+        trend: fallbackTrend,
         legalRate: LEGAL_CAP,
         transactions: cleanTransactions,
         timeAdjustedTransactions
@@ -257,8 +258,8 @@ export class WolseRateCalculator {
     // Step 6: Calculate time-weighted market rate
     const marketRateStats = this.calculateWeightedMarketRate(ratePairs);
 
-    // Step 7: Calculate trend using linear regression
-    const trend = this.calculateTrend(ratePairs);
+    // Step 7: Calculate trend using Mann-Kendall test on Full Monthly Cost
+    const trend = this.calculateTrendWithMannKendall(cleanTransactions, marketRateStats.median);
 
     console.log('\n✅ Market Rate Calculation Complete:');
     console.log(`   Market Rate: ${marketRateStats.median.toFixed(2)}%`);
@@ -266,7 +267,14 @@ export class WolseRateCalculator {
     console.log(`   Legal Cap: ${LEGAL_CAP}%`);
     console.log(`   Transactions: ${cleanTransactions.length}/${transactions.length} (${outliersRemoved} outliers removed)`);
     console.log(`   Confidence: ${confidenceLevel}`);
-    console.log(`   Trend: ${trend.direction} (${trend.percentage.toFixed(1)}%)`);
+    console.log(`   Trend: ${trend.direction} (${trend.percentage.toFixed(1)}%, p=${trend.pValue.toFixed(4)})`);
+
+    // Convert ratePairs to simple {x, y} format for trend analysis testing
+    const maxDaysAgo = Math.max(...ratePairs.map(p => p.daysAgo));
+    const ratePairsXY = ratePairs.map(p => ({
+      x: maxDaysAgo - p.daysAgo, // Chronological order (older = lower x)
+      y: p.impliedRate
+    }));
 
     return {
       marketRate: marketRateStats.median,
@@ -282,7 +290,8 @@ export class WolseRateCalculator {
       trend,
       legalRate: LEGAL_CAP,
       transactions: cleanTransactions,
-      timeAdjustedTransactions
+      timeAdjustedTransactions,
+      ratePairs: ratePairsXY
     };
   }
 
@@ -444,86 +453,6 @@ export class WolseRateCalculator {
     const weightedMean = pairs.reduce((sum, p) => sum + p.impliedRate * p.weight, 0) / totalWeight;
 
     return { median, weightedMean, percentile25, percentile75 };
-  }
-
-  /**
-   * Calculate trend using linear regression on conversion rates over time
-   */
-  private calculateTrend(pairs: ConversionRatePair[]): {
-    direction: 'RISING' | 'STABLE' | 'DECLINING';
-    percentage: number;
-    rSquared: number;
-  } {
-    if (pairs.length < 3) {
-      return { direction: 'STABLE', percentage: 0, rSquared: 0 };
-    }
-
-    // Sort pairs by average date
-    const sortedPairs = [...pairs].sort((a, b) => a.daysAgo - b.daysAgo);
-
-    // Convert to data points (x = days ago inverted for chronological order, y = rate)
-    const maxDaysAgo = Math.max(...sortedPairs.map(p => p.daysAgo));
-    const dataPoints = sortedPairs.map(p => ({
-      x: maxDaysAgo - p.daysAgo, // Chronological order (older = lower x)
-      y: p.impliedRate
-    }));
-
-    // Linear regression: y = mx + b
-    const n = dataPoints.length;
-    const sumX = dataPoints.reduce((sum, p) => sum + p.x, 0);
-    const sumY = dataPoints.reduce((sum, p) => sum + p.y, 0);
-    const sumXY = dataPoints.reduce((sum, p) => sum + p.x * p.y, 0);
-    const sumX2 = dataPoints.reduce((sum, p) => sum + p.x * p.x, 0);
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-
-    // Calculate R-squared
-    const yMean = sumY / n;
-    const ssTotal = dataPoints.reduce((sum, p) => sum + Math.pow(p.y - yMean, 2), 0);
-    const intercept = (sumY - slope * sumX) / n;
-    const ssResidual = dataPoints.reduce((sum, p) => {
-      const predicted = slope * p.x + intercept;
-      return sum + Math.pow(p.y - predicted, 2);
-    }, 0);
-    const rSquared = ssTotal > 0 ? Math.max(0, Math.min(1, 1 - (ssResidual / ssTotal))) : 0;
-
-    // Calculate percentage change over 6 months
-    const firstRate = intercept; // Rate at x=0 (oldest)
-    const lastRate = slope * maxDaysAgo + intercept; // Rate at x=maxDaysAgo (newest)
-    const percentageChange = firstRate > 0 ? ((lastRate - firstRate) / firstRate) * 100 : 0;
-
-    // Determine direction with tiered thresholds
-    // Large changes override low R² (noisy data can still show meaningful trends)
-    let direction: 'RISING' | 'STABLE' | 'DECLINING';
-
-    const absChange = Math.abs(percentageChange);
-
-    // Tier 1: Very large change (>15%) - trust regardless of R²
-    // Tier 2: Large change (>10%) - need minimal R² (0.1)
-    // Tier 3: Moderate change (>5%) - need reasonable R² (0.3)
-    const isSignificantTrend =
-      absChange > 15 ||
-      (absChange > 10 && rSquared > 0.1) ||
-      (absChange > 5 && rSquared > 0.3);
-
-    if (isSignificantTrend) {
-      direction = percentageChange > 0 ? 'RISING' : 'DECLINING';
-    } else {
-      direction = 'STABLE';
-    }
-
-    console.log('\n📈 Trend Analysis (Linear Regression):');
-    console.log(`   Data points: ${n}`);
-    console.log(`   Slope: ${(slope * 30).toFixed(4)}%/month`);
-    console.log(`   R-squared: ${(rSquared * 100).toFixed(1)}%`);
-    console.log(`   6-month change: ${percentageChange.toFixed(1)}%`);
-    console.log(`   Direction: ${direction}`);
-
-    return {
-      direction,
-      percentage: Math.abs(percentageChange),
-      rSquared
-    };
   }
 
   /**
@@ -810,4 +739,158 @@ export class WolseRateCalculator {
 
     return { pairs, timeAdjustedTransactions: allAdjustedTxs };
   }
+
+  /**
+   * Calculate trend using Mann-Kendall test on Full Monthly Cost
+   * Full Monthly Cost = rent + (deposit × market_rate / 12)
+   * This normalizes all transactions to a common metric for trend detection
+   */
+  calculateTrendWithMannKendall(
+    transactions: WolseTransaction[],
+    marketRate: number
+  ): {
+    direction: 'RISING' | 'STABLE' | 'DECLINING';
+    percentage: number;
+    pValue: number;
+    slopePerMonth: number;
+  } {
+    if (transactions.length < 4) {
+      return { direction: 'STABLE', percentage: 0, pValue: 1, slopePerMonth: 0 };
+    }
+
+    const now = new Date();
+    const rateMonthly = marketRate / 100 / 12;
+
+    // Calculate full monthly cost for each transaction
+    const dataPoints = transactions.map(t => {
+      const txDate = new Date(t.year, t.month - 1, t.day);
+      const daysAgo = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Full monthly cost in 만원
+      const fullMonthlyCost = (t.monthlyRent + t.deposit * rateMonthly) / 10000;
+      return { daysAgo, fullMonthlyCost };
+    });
+
+    // Convert to chronological order (x = days from oldest)
+    const maxDaysAgo = Math.max(...dataPoints.map(p => p.daysAgo));
+    const chronoData = dataPoints.map(p => ({
+      x: maxDaysAgo - p.daysAgo,
+      y: p.fullMonthlyCost
+    }));
+
+    // Run Mann-Kendall test
+    const mk = mannKendallTest(chronoData);
+    const tsSlope = theilSenSlope(chronoData);
+
+    // Calculate percentage change over the period
+    const avgCost = chronoData.reduce((sum, p) => sum + p.y, 0) / chronoData.length;
+    const percentageChange = avgCost > 0 ? (tsSlope * maxDaysAgo / avgCost) * 100 : 0;
+
+    console.log('\n📈 Trend Analysis (Mann-Kendall on Full Monthly Cost):');
+    console.log(`   Data points: ${chronoData.length}`);
+    console.log(`   Average full monthly cost: ${avgCost.toFixed(1)}만원`);
+    console.log(`   S statistic: ${mk.S}`);
+    console.log(`   Z statistic: ${mk.Z.toFixed(3)}`);
+    console.log(`   p-value: ${mk.pValue.toFixed(6)}`);
+    console.log(`   Theil-Sen slope: ${(tsSlope * 30).toFixed(2)}만원/month`);
+    console.log(`   Period change: ${percentageChange.toFixed(1)}%`);
+    console.log(`   Direction: ${mk.trend}`);
+
+    return {
+      direction: mk.trend,
+      percentage: Math.abs(percentageChange),
+      pValue: mk.pValue,
+      slopePerMonth: tsSlope * 30  // Convert daily slope to monthly
+    };
+  }
+}
+
+/**
+ * Mann-Kendall Trend Test
+ * Non-parametric test for monotonic trends in time series data
+ * Uses p-value < 0.05 for statistical significance
+ */
+function mannKendallTest(data: { x: number; y: number }[]): {
+  S: number;
+  Z: number;
+  pValue: number;
+  trend: 'RISING' | 'DECLINING' | 'STABLE';
+} {
+  const sorted = [...data].sort((a, b) => a.x - b.x);
+  const n = sorted.length;
+
+  if (n < 4) {
+    return { S: 0, Z: 0, pValue: 1, trend: 'STABLE' };
+  }
+
+  // Calculate S statistic (sum of signs of all pairwise differences)
+  let S = 0;
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const diff = sorted[j].y - sorted[i].y;
+      if (diff > 0) S += 1;
+      else if (diff < 0) S -= 1;
+    }
+  }
+
+  // Calculate variance of S
+  const varS = (n * (n - 1) * (2 * n + 5)) / 18;
+
+  // Calculate Z statistic with continuity correction
+  let Z: number;
+  if (S > 0) Z = (S - 1) / Math.sqrt(varS);
+  else if (S < 0) Z = (S + 1) / Math.sqrt(varS);
+  else Z = 0;
+
+  // Calculate two-tailed p-value
+  const pValue = 2 * (1 - normalCDF(Math.abs(Z)));
+
+  // Determine trend based on statistical significance (alpha = 0.05)
+  const significant = pValue < 0.05;
+  const trend: 'RISING' | 'DECLINING' | 'STABLE' = significant
+    ? (S > 0 ? 'RISING' : 'DECLINING')
+    : 'STABLE';
+
+  return { S, Z, pValue, trend };
+}
+
+/**
+ * Standard Normal Cumulative Distribution Function
+ * Uses Abramowitz and Stegun approximation
+ */
+function normalCDF(x: number): number {
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x) / Math.sqrt(2);
+  const t = 1.0 / (1.0 + p * x);
+  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return 0.5 * (1.0 + sign * y);
+}
+
+/**
+ * Theil-Sen Slope Estimator
+ * Robust median of all pairwise slopes (resistant to outliers)
+ */
+function theilSenSlope(data: { x: number; y: number }[]): number {
+  const sorted = [...data].sort((a, b) => a.x - b.x);
+  const n = sorted.length;
+  if (n < 2) return 0;
+
+  // Calculate all pairwise slopes
+  const slopes: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dx = sorted[j].x - sorted[i].x;
+      if (dx !== 0) {
+        slopes.push((sorted[j].y - sorted[i].y) / dx);
+      }
+    }
+  }
+
+  if (slopes.length === 0) return 0;
+
+  // Return median slope
+  slopes.sort((a, b) => a - b);
+  const mid = Math.floor(slopes.length / 2);
+  return slopes.length % 2 === 0 ? (slopes[mid - 1] + slopes[mid]) / 2 : slopes[mid];
 }
